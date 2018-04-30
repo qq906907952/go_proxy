@@ -98,7 +98,6 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	enc_data := crypt.Encrypt(recv[:i])
 
 	if _, werr := server.WriteToUDP(enc_data, udp_addr); werr != nil {
-		fmt.Println(err)
 		return
 	}
 

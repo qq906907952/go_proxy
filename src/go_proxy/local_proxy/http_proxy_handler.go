@@ -10,6 +10,7 @@ import (
 const https_establish_reply = "HTTP/1.1 200 Connection Established\r\n\r\n"
 
 func Handle_HTTP(local *net.TCPConn, host string, dest_port int, data []byte) {
+
 	url := strings.TrimSpace(host)
 
 	//handle domain

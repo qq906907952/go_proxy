@@ -87,7 +87,6 @@ func handle_domain(local *net.TCPConn) {
 		if err != nil {
 			return
 		}
-
 		if is_cn_domain {
 
 			ip, err := net.ResolveIPAddr("ip", dest_domain)

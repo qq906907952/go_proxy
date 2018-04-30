@@ -5,16 +5,16 @@ import (
 	"syscall"
 	"encoding/binary"
 	"bytes"
-	"bufio"
 	"strings"
 	"errors"
 	"strconv"
 	"math"
-	"os"
 	"io"
 	"time"
 	"fmt"
 )
+
+var china_ipv4 = map[int]int{}
 
 const (
 	Udp_recv_buff = 65500
@@ -56,91 +56,58 @@ func Ipv4str2int(ip string) (int, error) {
 }
 
 func Is_china_ipv4_addr(ip string) (bool, error) {
-	china_ipv4_list, err := os.Open("china_ipv4")
+	//china_ipv4_list, err := os.Open("china_ipv4")
+	//if err != nil {
+	//	return false, err
+	//}
+	//
+	//reader := bufio.NewReader(china_ipv4_list)
+	//for {
+	//	line, _, err := reader.ReadLine()
+	//	if err != nil {
+	//		if err == io.EOF {
+	//			return false, nil
+	//		} else {
+	//			return false, err
+	//		}
+	//	}
+	//	if len(line) == 0 {
+	//		continue
+	//	}
+	//	ip_mask := strings.Split(string(line), "/")
+	//	ipint, err := Ipv4str2int(ip_mask[0])
+	//	if err != nil {
+	//		return false, err
+	//	}
+	//	dest_ipint, err := Ipv4str2int(ip)
+	//	if err != nil {
+	//
+	//		return false, err
+	//	}
+	//	mask, err := strconv.Atoi(ip_mask[1])
+	//	if err != nil {
+	//
+	//		return false, err
+	//	}
+
+	dest_ipint, err := Ipv4str2int(ip)
 	if err != nil {
 		return false, err
 	}
-
-	reader := bufio.NewReader(china_ipv4_list)
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-				return false, nil
-			} else {
-				return false, err
-			}
-		}
-		if len(line) == 0 {
-			continue
-		}
-		ip_mask := strings.Split(string(line), "/")
-		ipint, err := Ipv4str2int(ip_mask[0])
-		if err != nil {
-			return false, err
-		}
-		dest_ipint, err := Ipv4str2int(ip)
-		if err != nil {
-
-			return false, err
-		}
-		mask, err := strconv.Atoi(ip_mask[1])
-		if err != nil {
-
-			return false, err
-		}
-
-		if dest_ipint&(int((math.Pow(2, float64(mask)))-1)<<uint(32-mask)) == ipint {
-			return true, nil
-		}
-	}
-
-}
-
-func Is_china_domain(domain string) (bool, error) {
-
-	_domain := strings.Split(domain, ".")
-	if len(_domain) < 2 {
-		return false, errors.New("domain name illegal")
-	}
-	if _domain[len(_domain)-1] == "cn" {
-		return true, nil
-	}
-
-	china_domain, err := os.Open("dnsmasq-china-list")
-	if err != nil {
-		return false, err
-	}
-	defer china_domain.Close()
-
-	reader := bufio.NewReader(china_domain)
-
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-
-				return false, nil
-			} else {
-				return false, err
-			}
-		}
-		if len(line) == 0 {
-			continue
-		}
-		if line_spl := strings.Split(string(line), "/"); len(line_spl) < 2 {
-
-			return false, errors.New("china domain dnsmasq file has error")
-		} else {
-
-			//if reg2.MatchString(domain) || reg.MatchString(domain) {
-			if strings.Join(_domain[len(_domain)-2:], ".") == line_spl[1] {
-
+	for mask := 0; mask <= 32; mask++ {
+		if v, ok := china_ipv4[dest_ipint&(int((math.Pow(2, float64(mask)))-1)<<uint(32-mask))]; ok {
+			if v == mask {
 				return true, nil
 			}
 		}
-
 	}
+
+	return false, nil
+
+	//	if dest_ipint&(int((math.Pow(2, float64(mask)))-1)<<uint(32-mask)) == ipint {
+	//		return true, nil
+	//	}
+	//}
 
 }
 

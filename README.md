@@ -69,7 +69,7 @@ git clone https://github.com/qq906907952/go_proxy.git
             "Enc_method": "chacha20",         //加密方式 仅支持chacha20和aes-256-cfb
             "Password": "",                   //密码 必须为32字节
             "Dns_addr":"8.8.8.8",             //dns地址
-            "Dns_port":53,                    //dns地址
+            "Dns_port":53,                    //dns端口
             "Dns_req_proto":"tcp"             //dns请求使用协议(tcp或udp，如果是tcp则请求为udp->tcp->udp)
           }
 

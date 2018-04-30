@@ -9,9 +9,16 @@ import (
 	"strconv"
 	"errors"
 	"fmt"
+	"bufio"
+	"os"
+	"io"
+	"sync"
 )
 
 var Dns_address *net.UDPAddr
+var domain_map = map[string]bool{}
+
+var lock = sync.Mutex{}
 
 const (
 	A_record    = 1
@@ -284,6 +291,69 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		return forward_dns_request(A_record)
 	default:
 		return nil, errors.New("unsport proto")
+	}
+
+}
+
+func Is_china_domain(domain string) (bool, error) {
+	_domain := strings.Split(domain, ".")
+	if len(_domain) < 2 {
+		return false, errors.New("domain name illegal")
+	}
+
+	if is_cn, ok := domain_map[strings.Join(_domain[len(_domain)-2:], ".")]; ok {
+		return is_cn,nil
+	}
+
+	if _domain[len(_domain)-1] == "cn" {
+		return true, nil
+	}
+
+	china_domain, err := os.Open("dnsmasq-china-list")
+	if err != nil {
+		return false, nil
+	}
+	defer china_domain.Close()
+
+	reader := bufio.NewReader(china_domain)
+
+	for {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+
+				go func() {
+					lock.Lock()
+					domain_map[strings.Join(_domain[len(_domain)-2:], ".")] = false
+					lock.Unlock()
+				}()
+
+				return false, nil
+
+			} else {
+				return false, err
+			}
+		}
+		if len(line) == 0 {
+			continue
+		}
+		if line_spl := strings.Split(string(line), "/"); len(line_spl) < 2 {
+
+			continue
+
+		} else {
+
+			//if reg2.MatchString(domain) || reg.MatchString(domain) {
+			if strings.Join(_domain[len(_domain)-2:], ".") == line_spl[1] {
+				go func(){
+					lock.Lock()
+					domain_map[strings.Join(_domain[len(_domain)-2:], ".")] = true
+					lock.Unlock()
+				}()
+				return true, nil
+			}
+		}
+
 	}
 
 }
