@@ -76,17 +76,19 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			defer ns.Close()
 			defer con.Close()
 			answer := make([]byte, util.Udp_recv_buff)
-
-			i, err := ns.Read(answer)
-			if i > 0 {
-				if err := crypt.Write(con, answer[:i]); err != nil {
+			for {
+				i, err := ns.Read(answer)
+				if i > 0 {
+					if err := crypt.Write(con, answer[:i]); err != nil {
+						return
+					}
+				}
+				if err != nil {
 					return
 				}
 			}
-			if err != nil {
-				return
-			}
 		}()
+
 		for {
 			dec_data, err := crypt.Read(con)
 			if err != nil {

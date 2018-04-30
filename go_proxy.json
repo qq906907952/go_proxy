@@ -1,15 +1,16 @@
 {
   "Client":{
     "Turn":false,
-    "Ipv6":false,
+    "Ipv6":true,
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
     "Local_port": 3939,
     "Server_addr": "0.0.0.0",
     "Server_port": 9393,
-    "Enc_method": "aes-256-cfb",
+    "Enc_method": "chacha20",
     "Password": " miku chang wa yichibang kawaii ",
-    "Dns_addr": "8.8.8.8:53",
+    "Dns_addr": "2600:3c01::5",
+    "Dns_port": 53,
     "Dns_req_proto": "tcp"
   },
 
@@ -19,7 +20,7 @@
     "Port":[
       {
         "Listen_port":9393,
-        "Enc_method": "aes-256-cfb",
+        "Enc_method": "chacha20",
         "Password": " miku chang wa yichibang kawaii "
       }
     ]

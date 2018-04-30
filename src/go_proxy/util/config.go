@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"strconv"
-	"strings"
 	"net"
 	"fmt"
 	"sync"
@@ -18,24 +16,23 @@ var Config config
 var Group sync.WaitGroup
 
 type config struct {
-
 	Udp_relay bool
 	Ulimit    uint64
 
 	Client struct {
-		Turn      bool
-		Ipv6     bool
+		Turn          bool
+		Ipv6          bool
 		Local_proxy   bool
-		Local_addr   string
-		Local_port   int
-		Server_addr  string
-		Server_port  int
-		Enc_method   string
-		Password     string
-		Dns_addr     string
+		Local_addr    string
+		Local_port    int
+		Server_addr   string
+		Server_port   int
+		Enc_method    string
+		Password      string
+		Dns_addr      string
+		Dns_port      int
 		Dns_req_proto string
-		Udp_checksum bool
-
+		Udp_checksum  bool
 	}
 
 	Server struct {
@@ -46,7 +43,6 @@ type config struct {
 			Password    string
 		}
 	}
-
 }
 
 func init() {
@@ -73,32 +69,18 @@ func init() {
 		log.Fatal("server and client can not be turn on in the same machine")
 	}
 
-	if Config.Client.Turn && Config.Client.Local_proxy{
+	if Config.Client.Turn && Config.Client.Local_proxy {
 		log.Fatal("client and http_proxy can not be turn on in the same machine")
 	}
-	if Config.Client.Dns_req_proto!="tcp" && Config.Client.Dns_req_proto!="udp"{
+	if Config.Client.Dns_req_proto != "tcp" && Config.Client.Dns_req_proto != "udp" {
 		log.Fatal("dns request protocol is not support")
 	}
 
-	dns_addr := strings.Split(Config.Client.Dns_addr, ":")
-
-	if len(dns_addr) != 2 {
-		log.Fatal("dns_addr is illegal")
-	} else {
-		dns_port, err := strconv.Atoi(dns_addr[1])
-		if err != nil {
-			log.Fatal(err)
-
-		}
-		Dns_address = &net.UDPAddr{
-			IP:   net.ParseIP(dns_addr[0]),
-			Port: dns_port,
-			Zone: "",
-		}
+	Dns_address = &net.UDPAddr{
+		IP:   net.ParseIP(Config.Client.Dns_addr),
+		Port: Config.Client.Dns_port,
+		Zone: "",
 	}
-
-
-
 
 
 }

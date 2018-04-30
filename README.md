@@ -60,7 +60,7 @@ git clone https://github.com/qq906907952/go_proxy.git
 
     "Client":{
             "Turn":false,                     //本地代理设置为false
-            "Ipv6":false,                     //是否尝试將域名解析ipv6地址
+            "Ipv6":false,                     //是否尝试將域名解析ipv6地址 需要服务器支持ipv6
             "Local_proxy":true，              //本地代理设置位true，注意和上面一项不能同时位true。
             "Local_addr":"0.0.0.0",           //本地监听地址，一般为0.0.0.0
             "Local_port": 9999,               //本地代理监听端口
@@ -68,7 +68,8 @@ git clone https://github.com/qq906907952/go_proxy.git
             "Server_port": 9999,              //服务端端口
             "Enc_method": "chacha20",         //加密方式 仅支持chacha20和aes-256-cfb
             "Password": "",                   //密码 必须为32字节
-            "Dns_addr":"8.8.8.8:53",          //dns地址
+            "Dns_addr":"8.8.8.8",             //dns地址
+            "Dns_port":53,                    //dns地址
             "Dns_req_proto":"tcp"             //dns请求使用协议(tcp或udp，如果是tcp则请求为udp->tcp->udp)
           }
 

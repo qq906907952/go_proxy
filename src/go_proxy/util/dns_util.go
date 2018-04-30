@@ -207,6 +207,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 			answer, err := crypt.Read(con)
 
 			if len(answer) > len(request) {
+
 				ip_bytes, err = Get_record_from_answer(answer[len(request):], AAAA_record)
 				if err == nil {
 					return ip_bytes, nil
@@ -240,14 +241,19 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		port := make([]byte, 2)
 		binary.BigEndian.PutUint16(port, uint16(Dns_address.Port))
-		dest_addr := bytes.Join([][]byte{port, Dns_address.IP.To4()}, nil)
+
+		dns_addr :=Dns_address.IP.To4()
+		if dns_addr==nil{
+			dns_addr=Dns_address.IP.To16()
+		}
+
+		dest_addr := bytes.Join([][]byte{port, dns_addr}, nil)
 		dns := &DNSStruct{}
 		var forward_dns_request = func(qtype uint16) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
 			origin_port := make([]byte, 2)
 			rand.Read(origin_port)
-
 			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, origin_port, request}, nil)))
 			data := make([]byte, Udp_recv_buff)
 			i, err := con.Read(data)
