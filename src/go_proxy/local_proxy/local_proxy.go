@@ -15,12 +15,12 @@ import (
 
 var crypt util.Crypt_interface
 
-
 func Start_local_proxy_client() {
 	defer util.Group.Done()
+
 	crypt = util.Get_crypt(util.Config.Client.Enc_method, util.Config.Client.Password)
 	lcoal_listen, err := net.ListenTCP("tcp", &net.TCPAddr{
-		IP:   nil,
+		IP:   net.ParseIP(util.Config.Client.Local_addr),
 		Port: util.Config.Client.Local_port,
 		Zone: "",
 	})
@@ -56,13 +56,13 @@ func Start_local_proxy_client() {
 
 				Handle_sock5_proxy(local)
 			} else {
-				b, o,err := util.Read_at_least_byte(local, []byte("\r\n\r\n"))
+				b, o, err := util.Read_at_least_byte(local, []byte("\r\n\r\n"))
 
-				if b==nil || err!=nil{
+				if b == nil || err != nil {
 					return
 				}
 
-				 Handle_http_proxy(local, bytes.Join([][]byte{recv, b,o}, nil))
+				Handle_http_proxy(local, bytes.Join([][]byte{recv, b, o}, nil))
 			}
 		}()
 
@@ -71,32 +71,31 @@ func Start_local_proxy_client() {
 
 func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 
-	header,err:=http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
+	header, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
-	if err!=nil{
+	if err != nil {
 		return
 	}
-
 
 	if strings.ToUpper(header.Method) == "CONNECT" {
 
 		Handle_HTTPS(local, header.Host)
 
 	} else {
-		host:=header.Host
+		host := header.Host
 		var dest_port int
 		var url string
 		var err error
 
-		_host:=strings.Split(host,":")
-		switch len(_host){
+		_host := strings.Split(host, ":")
+		switch len(_host) {
 		case 1:
-			url=host
-			dest_port=80
+			url = host
+			dest_port = 80
 		case 2:
-			url=_host[0]
-			dest_port,err=strconv.Atoi(_host[1])
-			if err!=nil{
+			url = _host[0]
+			dest_port, err = strconv.Atoi(_host[1])
+			if err != nil {
 				return
 			}
 		default:
@@ -104,13 +103,13 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 
 		}
 
-		recv=convert_to_close(recv)
+		recv = convert_to_close(recv)
 		index := bytes.Index(recv, []byte("http://"))
 
 		if index != -1 {
-			Handle_HTTP(local, url,dest_port, bytes.Join([][]byte{recv[:index], recv[index+len([]byte("http://"))+len([]byte(host)):]}, nil))
+			Handle_HTTP(local, url, dest_port, bytes.Join([][]byte{recv[:index], recv[index+len([]byte("http://"))+len([]byte(host)):]}, nil))
 		} else {
-			Handle_HTTP(local, url, dest_port,recv)
+			Handle_HTTP(local, url, dest_port, recv)
 		}
 	}
 
@@ -135,8 +134,7 @@ func Handle_sock5_proxy(con *net.TCPConn) {
 	}
 }
 
-
-func convert_to_close(recv []byte) ([]byte){
+func convert_to_close(recv []byte) ([]byte) {
 	recv = []byte(strings.Replace(string(recv), "keep-alive", "close", -1))
 	recv = []byte(strings.Replace(string(recv), "Keep-Alive", "close", -1))
 	return recv
