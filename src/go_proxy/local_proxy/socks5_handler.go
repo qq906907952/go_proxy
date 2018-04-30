@@ -73,6 +73,7 @@ func handle_domain(local *net.TCPConn) {
 	}
 
 	domain, err := util.Read_tcp_data(local, int(domain_len[0]))
+
 	port, err := util.Read_tcp_data(local, 2)
 	if err != nil {
 
@@ -120,7 +121,14 @@ func handle_domain(local *net.TCPConn) {
 
 		}
 	} else {
-		return
+		ip := net.ParseIP(string(domain))
+		if ip.To4() != nil {
+			handle_ip(local, ip.To4(), port)
+		} else if ip.To16() != nil {
+			handle_ip(local, ip.To16(), port)
+		} else {
+			return
+		}
 	}
 }
 

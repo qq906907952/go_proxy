@@ -1,7 +1,7 @@
 {
   "Client":{
     "Turn":false,
-    "Ipv6":true,
+    "Ipv6":false,
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
     "Local_port": 3939,
@@ -9,7 +9,7 @@
     "Server_port": 9393,
     "Enc_method": "chacha20",
     "Password": " miku chang wa yichibang kawaii ",
-    "Dns_addr": "2600:3c01::5",
+    "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
     "Dns_req_proto": "tcp"
   },
