@@ -5,7 +5,7 @@
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
     "Local_port": 3939,
-    "Server_addr": "0.0.0.0",
+    "Server_addr": "35.234.33.184",
     "Server_port": 9393,
     "Enc_method": "chacha20",
     "Password": " miku chang wa yichibang kawaii ",
