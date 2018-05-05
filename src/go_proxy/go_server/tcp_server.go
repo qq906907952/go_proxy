@@ -50,12 +50,6 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 		return
 	}
 
-	//check dns request
-	dec_data, err := crypt.Read(con)
-	if err != nil {
-
-		return
-	}
 
 	if request_type == util.Udp_conn {
 
@@ -69,9 +63,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			return
 		}
 		defer ns.Close()
-		if _, err := ns.Write(dec_data); err != nil {
-			return
-		}
+
 		go func() {
 			defer ns.Close()
 			defer con.Close()
@@ -108,11 +100,6 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			return
 		}
 		defer target.Close()
-
-		if _, err := target.Write(dec_data); err != nil {
-
-			return
-		}
 
 		util.Connection_loop(target, con, crypt)
 	} else {

@@ -51,16 +51,11 @@ func handle_socks5_tcp(local *net.TCPConn, request []byte) {
 
 }
 
-func write_sock5_reply(con *net.TCPConn, atype byte) error {
-	local_port := make([]byte, 2)
-	binary.BigEndian.PutUint16(local_port, uint16(util.Config.Client.Local_port))
-	local_ip := net.ParseIP(util.Config.Client.Local_addr).To4()
-	if local_ip == nil {
-		local_ip = net.ParseIP(util.Config.Client.Local_addr).To16()
-	}
+func construct_sock5_reply() []byte {
+	var atype byte
+	atype=1
 
-	_, err := con.Write(bytes.Join([][]byte{[]byte{5, 0, 0, atype}, local_ip, local_port}, nil))
-	return err
+	return bytes.Join([][]byte{[]byte{5, 0, 0, atype}, []byte{0,0,0,0}, []byte{0,0}}, nil)
 }
 
 func handle_domain(local *net.TCPConn) {
@@ -95,11 +90,9 @@ func handle_domain(local *net.TCPConn) {
 				util.Logger.Println("can not reslove domain:" + dest_domain + " " + err.Error())
 				return
 			}
-			if err := write_sock5_reply(local, 1); err != nil {
-				return
-			}
 
-			handle_connection(local, ip, int(binary.BigEndian.Uint16(port)), nil, nil, is_cn_domain)
+
+			handle_connection(local, ip, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn_domain)
 		} else {
 
 			dest_ip, err := util.Parse_not_cn_domain(string(domain), crypt)
@@ -109,14 +102,11 @@ func handle_domain(local *net.TCPConn) {
 				return
 			}
 
-			if err := write_sock5_reply(local, 1); err != nil {
-				return
-			}
 
 			handle_connection(local, &net.IPAddr{
 				IP:   dest_ip,
 				Zone: "",
-			}, int(binary.BigEndian.Uint16(port)), nil, nil, is_cn_domain)
+			}, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn_domain)
 
 		}
 	} else {
@@ -143,13 +133,10 @@ func handle_ip(local *net.TCPConn, ip, port []byte) {
 
 	}
 
-	if err := write_sock5_reply(local, 1); err != nil {
-		return
-	}
 	handle_connection(local, &net.IPAddr{
 		IP:   ip,
 		Zone: "",
-	}, int(binary.BigEndian.Uint16(port)), nil, nil, is_cn)
+	}, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn)
 
 }
 
