@@ -17,6 +17,8 @@ import (
 
 var Dns_address *net.UDPAddr
 var domain_map = map[string]bool{}
+var ip_domain_map=map[string][]byte{}
+
 
 var lock = sync.Mutex{}
 
@@ -195,6 +197,20 @@ func Is_domain(url string) bool {
 
 func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
+	if ip,ok:=ip_domain_map[domain];ok{
+		return ip,nil
+	}
+
+	var ip []byte
+	defer func(){
+		if len(ip)!=0{
+			go func(){
+				lock.Lock()
+				ip_domain_map[domain]=ip
+				lock.Unlock()
+			}()
+		}
+	}()
 	switch Config.Client.Dns_req_proto {
 	case "tcp":
 		con, err := Connect_to_server(crypt, Udp_conn, Dns_address.Port, Dns_address.IP)
@@ -204,7 +220,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		defer con.Close()
 
 		dns := &DNSStruct{}
-		var ip_bytes []byte
+
 		if Config.Client.Ipv6 {
 			dns.Fill_question(domain, AAAA_record)
 			request := dns.Marshal_request()
@@ -215,9 +231,9 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 			if len(answer) > len(request) {
 
-				ip_bytes, err = Get_record_from_answer(answer[len(request):], AAAA_record)
+				ip, err = Get_record_from_answer(answer[len(request):], AAAA_record)
 				if err == nil {
-					return ip_bytes, nil
+					return ip, nil
 				}
 			}
 
@@ -232,9 +248,9 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		if len(answer) > len(request) {
 
-			ip_bytes, err = Get_record_from_answer(answer[len(request):], A_record)
+			ip, err = Get_record_from_answer(answer[len(request):], A_record)
 			if err == nil {
-				return ip_bytes, nil
+				return ip, nil
 			}
 		}
 		return nil, errors.New("no recored found")
@@ -256,6 +272,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		dest_addr := bytes.Join([][]byte{port, dns_addr}, nil)
 		dns := &DNSStruct{}
+
 		var forward_dns_request = func(qtype uint16) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
@@ -280,7 +297,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		}
 
 		if Config.Client.Ipv6 {
-			ip, err := forward_dns_request(AAAA_record)
+			ip, err = forward_dns_request(AAAA_record)
 			if err != nil {
 				goto ipv4
 			}
@@ -288,7 +305,8 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		}
 	ipv4:
-		return forward_dns_request(A_record)
+		ip,err=forward_dns_request(A_record)
+		return ip,err
 	default:
 		return nil, errors.New("unsport proto")
 	}
