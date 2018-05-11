@@ -5,7 +5,6 @@ import (
 	"go_proxy/go_server"
 	"go_proxy/local_proxy"
 	"syscall"
-	"go_proxy/go_client"
 )
 
 func main() {
@@ -15,16 +14,16 @@ func main() {
 		Max: util.Config.Ulimit,
 	})
 
-	if util.Config.Client.Turn {
-
-		util.Group.Add(1)
-		go go_client.Start_TCPclient()
-
-		if util.Config.Udp_relay {
-			util.Group.Add(1)
-			go go_client.Start_UDPclien()
-		}
-	}
+	//if util.Config.Client.Turn {
+	//
+	//	util.Group.Add(1)
+	//	go go_client.Start_TCPclient()
+	//
+	//	if util.Config.Udp_relay {
+	//		util.Group.Add(1)
+	//		go go_client.Start_UDPclien()
+	//	}
+	//}
 
 	if util.Config.Client.Local_proxy {
 

@@ -1,6 +1,5 @@
 {
   "Client":{
-    "Turn":false,
     "Ipv6":false,
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",

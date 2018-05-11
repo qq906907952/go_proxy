@@ -2,7 +2,6 @@ package util
 
 import (
 	"net"
-	"syscall"
 	"encoding/binary"
 	"bytes"
 	"strings"
@@ -25,21 +24,21 @@ const (
 )
 
 //get the tcp origin addrress after iptables nat redirectr
-func Get_tcp_origin_dest(con *net.TCPConn) (*syscall.IPv6Mreq, error) {
-	file, err := con.File()
-	if err != nil {
-		return nil, err
-
-	}
-
-	//sockopt const so_origin_dest = 80
-	addr, err := syscall.GetsockoptIPv6Mreq(int(file.Fd()), syscall.SOL_IP, SO_ORIGIN_DST)
-	if err != nil {
-		return nil, err
-	}
-
-	return addr, nil
-}
+//func Get_tcp_origin_dest(con *net.TCPConn) (*syscall.IPv6Mreq, error) {
+//	file, err := con.File()
+//	if err != nil {
+//		return nil, err
+//
+//	}
+//
+//	//sockopt const so_origin_dest = 80
+//	addr, err := syscall.GetsockoptIPv6Mreq(int(file.Fd()), syscall.SOL_IP, SO_ORIGIN_DST)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return addr, nil
+//}
 
 func Ipv4str2int(ip string) (int, error) {
 	ipstr := strings.Split(ip, ".")
