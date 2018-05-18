@@ -16,10 +16,34 @@ import (
 )
 
 var Dns_address *net.UDPAddr
-var domain_map = map[string]bool{}
-var ip_domain_map=map[string][]byte{}
+var domain_map *saft_map
+var ip_domain_map *saft_map
 
+type saft_map struct {
+	sync.RWMutex
+	_map map[string]interface{}
+}
 
+func (this *saft_map) read(key string) (interface{}, bool) {
+	this.RWMutex.RLock()
+	value, ok := this._map[key]
+	this.RWMutex.RUnlock()
+	return value, ok
+}
+
+func (this *saft_map) write(key string, value interface{}) {
+	this.RWMutex.Lock()
+	this._map[key] = value
+	this.RWMutex.Unlock()
+
+}
+
+func init() {
+	domain_map = new(saft_map)
+	domain_map._map = make(map[string]interface{})
+	ip_domain_map = new(saft_map)
+	ip_domain_map._map = make(map[string]interface{})
+}
 
 const (
 	A_record    = 1
@@ -195,19 +219,16 @@ func Is_domain(url string) bool {
 }
 
 func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
-	lock:=sync.RWMutex{}
-	lock.RLock()
-	if ip,ok:=ip_domain_map[domain];ok{
-		return ip,nil
+
+	if ip, ok := ip_domain_map.read(domain); ok {
+		return ip.([]byte), nil
 	}
-	lock.RUnlock()
+
 	var ip []byte
-	defer func(){
-		if len(ip)!=0{
-			go func(){
-				lock.Lock()
-				ip_domain_map[domain]=ip
-				lock.Unlock()
+	defer func() {
+		if len(ip) != 0 {
+			go func() {
+				ip_domain_map.write(domain, ip)
 			}()
 		}
 	}()
@@ -265,9 +286,9 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		port := make([]byte, 2)
 		binary.BigEndian.PutUint16(port, uint16(Dns_address.Port))
 
-		dns_addr :=Dns_address.IP.To4()
-		if dns_addr==nil{
-			dns_addr=Dns_address.IP.To16()
+		dns_addr := Dns_address.IP.To4()
+		if dns_addr == nil {
+			dns_addr = Dns_address.IP.To16()
 		}
 
 		dest_addr := bytes.Join([][]byte{port, dns_addr}, nil)
@@ -305,8 +326,8 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		}
 	ipv4:
-		ip,err=forward_dns_request(A_record)
-		return ip,err
+		ip, err = forward_dns_request(A_record)
+		return ip, err
 	default:
 		return nil, errors.New("unsport proto")
 	}
@@ -314,16 +335,15 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 }
 
 func Is_china_domain(domain string) (bool, error) {
-	lock:=sync.RWMutex{}
+
 	_domain := strings.Split(domain, ".")
 	if len(_domain) < 2 {
 		return false, errors.New("domain name illegal")
 	}
-	lock.RLock()
-	if is_cn, ok := domain_map[strings.Join(_domain[len(_domain)-2:], ".")]; ok {
-		return is_cn,nil
+
+	if is_cn, ok := domain_map.read(strings.Join(_domain[len(_domain)-2:], ".")); ok {
+		return is_cn.(bool), nil
 	}
-	lock.RUnlock()
 
 	if _domain[len(_domain)-1] == "cn" {
 		return true, nil
@@ -343,9 +363,7 @@ func Is_china_domain(domain string) (bool, error) {
 			if err == io.EOF {
 
 				go func() {
-					lock.Lock()
-					domain_map[strings.Join(_domain[len(_domain)-2:], ".")] = false
-					lock.Unlock()
+					domain_map.write(strings.Join(_domain[len(_domain)-2:], "."), false)
 				}()
 
 				return false, nil
@@ -365,10 +383,9 @@ func Is_china_domain(domain string) (bool, error) {
 
 			//if reg2.MatchString(domain) || reg.MatchString(domain) {
 			if strings.Join(_domain[len(_domain)-2:], ".") == line_spl[1] {
-				go func(){
-					lock.Lock()
-					domain_map[strings.Join(_domain[len(_domain)-2:], ".")] = true
-					lock.Unlock()
+				go func() {
+					domain_map.write(strings.Join(_domain[len(_domain)-2:], "."), true)
+
 				}()
 				return true, nil
 			}
