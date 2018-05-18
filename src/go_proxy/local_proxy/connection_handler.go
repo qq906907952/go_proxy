@@ -5,6 +5,7 @@ import (
 	"net"
 	"io"
 	"fmt"
+	"time"
 )
 
 func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix_data []byte, ack_data []byte, is_cn bool) {
@@ -23,6 +24,8 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 			util.Logger.Println(fmt.Sprintf("can not connect to %s:%s",ip.String(),err.Error()))
 			return
 		}
+		remote.SetKeepAlive(true)
+		remote.SetKeepAlivePeriod(10*time.Second)
 
 	} else {
 

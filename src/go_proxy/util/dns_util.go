@@ -20,7 +20,6 @@ var domain_map = map[string]bool{}
 var ip_domain_map=map[string][]byte{}
 
 
-var lock = sync.Mutex{}
 
 const (
 	A_record    = 1
@@ -196,11 +195,12 @@ func Is_domain(url string) bool {
 }
 
 func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
-
+	lock:=sync.RWMutex{}
+	lock.RLock()
 	if ip,ok:=ip_domain_map[domain];ok{
 		return ip,nil
 	}
-
+	lock.RUnlock()
 	var ip []byte
 	defer func(){
 		if len(ip)!=0{
@@ -314,14 +314,16 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 }
 
 func Is_china_domain(domain string) (bool, error) {
+	lock:=sync.RWMutex{}
 	_domain := strings.Split(domain, ".")
 	if len(_domain) < 2 {
 		return false, errors.New("domain name illegal")
 	}
-
+	lock.RLock()
 	if is_cn, ok := domain_map[strings.Join(_domain[len(_domain)-2:], ".")]; ok {
 		return is_cn,nil
 	}
+	lock.RUnlock()
 
 	if _domain[len(_domain)-1] == "cn" {
 		return true, nil

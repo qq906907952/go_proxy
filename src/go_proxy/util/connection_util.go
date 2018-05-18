@@ -118,6 +118,8 @@ func Connect_to_server(crypt Crypt_interface, request_type, dest_port int, ip ne
 		return nil, err
 	}
 	remote := con.(*net.TCPConn)
+	remote.SetKeepAlive(true)
+	remote.SetKeepAlivePeriod(10*time.Second)
 	timestamp_bytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp_bytes, uint64(time.Now().Unix()))
 

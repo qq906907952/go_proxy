@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 var crypt util.Crypt_interface
@@ -39,7 +40,8 @@ func Start_local_proxy_client() {
 			util.Logger.Println("tcp accept error " + err.Error())
 			continue
 		}
-
+		local.SetKeepAlive(true)
+		local.SetKeepAlivePeriod(10*time.Second)
 		go func() {
 
 			defer local.Close()
