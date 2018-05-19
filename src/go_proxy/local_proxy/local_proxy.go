@@ -46,7 +46,7 @@ func Start_local_proxy_client() {
 
 			defer local.Close()
 			defer util.Handle_panic()
-			recv := make([]byte, 3)
+			recv := make([]byte, 1)
 			_, err = io.ReadFull(local, recv)
 
 			if err != nil {
@@ -54,7 +54,7 @@ func Start_local_proxy_client() {
 			}
 
 			//proxy decide
-			if recv[0] == 5 && recv[2] == 0 {
+			if recv[0] == 5  {
 
 				Handle_sock5_proxy(local)
 			} else {
@@ -118,22 +118,34 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 }
 
 func Handle_sock5_proxy(con *net.TCPConn) {
-
-	if _, err := con.Write([]byte{5, 0}); err != nil {
+	_b:=make([]byte,1)
+	if _,err:=con.Read(_b);err!=nil{
 		return
 	}
-
-	recv, err := util.Read_tcp_data(con, 4)
-
-	if err != nil {
+	_b,err:=util.Read_tcp_data(con,int(_b[0]))
+	if err!=nil{
 		return
 	}
+	for _,v:=range _b{
+		if v==0{
+			if _, err := con.Write([]byte{5, 0}); err != nil {
+				return
+			}
 
-	if recv[1] == 1 {
-		handle_socks5_tcp(con, recv)
-	} else if recv[1] == 3 {
-		handle_socks5_udp(con, recv)
+			recv, err := util.Read_tcp_data(con, 4)
+
+			if err != nil {
+				return
+			}
+
+			if recv[1] == 1 {
+				handle_socks5_tcp(con, recv)
+			} else if recv[1] == 3 {
+				handle_socks5_udp(con, recv)
+			}
+		}
 	}
+
 }
 
 func convert_to_close(recv []byte) ([]byte) {
