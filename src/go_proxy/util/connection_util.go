@@ -2,7 +2,6 @@ package util
 
 import (
 	"net"
-	"syscall"
 	"encoding/binary"
 	"bytes"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"io"
 	"time"
 	"fmt"
+	"syscall"
 )
 
 var china_ipv4 = map[int]int{}
@@ -56,39 +56,7 @@ func Ipv4str2int(ip string) (int, error) {
 }
 
 func Is_china_ipv4_addr(ip string) (bool, error) {
-	//china_ipv4_list, err := os.Open("china_ipv4")
-	//if err != nil {
-	//	return false, err
-	//}
-	//
-	//reader := bufio.NewReader(china_ipv4_list)
-	//for {
-	//	line, _, err := reader.ReadLine()
-	//	if err != nil {
-	//		if err == io.EOF {
-	//			return false, nil
-	//		} else {
-	//			return false, err
-	//		}
-	//	}
-	//	if len(line) == 0 {
-	//		continue
-	//	}
-	//	ip_mask := strings.Split(string(line), "/")
-	//	ipint, err := Ipv4str2int(ip_mask[0])
-	//	if err != nil {
-	//		return false, err
-	//	}
-	//	dest_ipint, err := Ipv4str2int(ip)
-	//	if err != nil {
-	//
-	//		return false, err
-	//	}
-	//	mask, err := strconv.Atoi(ip_mask[1])
-	//	if err != nil {
-	//
-	//		return false, err
-	//	}
+
 
 	dest_ipint, err := Ipv4str2int(ip)
 	if err != nil {
@@ -104,10 +72,6 @@ func Is_china_ipv4_addr(ip string) (bool, error) {
 
 	return false, nil
 
-	//	if dest_ipint&(int((math.Pow(2, float64(mask)))-1)<<uint(32-mask)) == ipint {
-	//		return true, nil
-	//	}
-	//}
 
 }
 
@@ -119,6 +83,8 @@ func Connect_to_server(crypt Crypt_interface, request_type, dest_port int, ip ne
 		return nil, err
 	}
 	remote := con.(*net.TCPConn)
+	remote.SetKeepAlive(true)
+	remote.SetKeepAlivePeriod(10*time.Second)
 	timestamp_bytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp_bytes, uint64(time.Now().Unix()))
 
@@ -181,6 +147,8 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 	//con1 read raw ,enc and write to con2
 	//con2 read enc data ,dec and write to con1
 
+
+
 	go func() {
 		defer Handle_panic()
 		defer con1.Close()
@@ -197,7 +165,6 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 			}
 
 			if err != nil {
-
 				return
 			}
 		}

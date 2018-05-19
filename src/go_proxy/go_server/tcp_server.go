@@ -42,6 +42,8 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	var err error
 	defer util.Handle_panic()
 	defer con.Close()
+	con.SetKeepAlive(true)
+	con.SetKeepAlivePeriod(10*time.Second)
 
 	dest, request_type, err := handshake(con, crypt)
 
@@ -100,7 +102,8 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			return
 		}
 		defer target.Close()
-
+		target.SetKeepAlive(true)
+		target.SetKeepAlivePeriod(10*time.Second)
 		util.Connection_loop(target, con, crypt)
 	} else {
 		util.Logger.Println("unknow connect type from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port))

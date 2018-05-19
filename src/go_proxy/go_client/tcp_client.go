@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"time"
 )
 
 var crypt util.Crypt_interface
@@ -45,7 +46,8 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	defer util.Handle_panic()
 
 	defer con.Close()
-
+	con.SetKeepAlive(true)
+	con.SetKeepAlivePeriod(10*time.Second)
 	addr, err := util.Get_tcp_origin_dest(con)
 	if err != nil {
 		util.Logger.Println("tcp can not read the origin dest:" + err.Error())
