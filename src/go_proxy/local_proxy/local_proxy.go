@@ -41,7 +41,7 @@ func Start_local_proxy_client() {
 			continue
 		}
 		local.SetKeepAlive(true)
-		local.SetKeepAlivePeriod(10*time.Second)
+		local.SetKeepAlivePeriod(10 * time.Second)
 		go func() {
 
 			defer local.Close()
@@ -54,7 +54,7 @@ func Start_local_proxy_client() {
 			}
 
 			//proxy decide
-			if recv[0] == 5  {
+			if recv[0] == 5 {
 
 				Handle_sock5_proxy(local)
 			} else {
@@ -73,18 +73,18 @@ func Start_local_proxy_client() {
 
 func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 
-	header, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
+	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
 	if err != nil {
 		return
 	}
 
-	if strings.ToUpper(header.Method) == "CONNECT" {
+	if strings.ToUpper(req.Method) == "CONNECT" {
 
-		Handle_HTTPS(local, header.Host)
+		Handle_HTTPS(local, req.Host)
 
 	} else {
-		host := header.Host
+		host := req.Host
 		var dest_port int
 		var url string
 		var err error
@@ -105,29 +105,27 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 
 		}
 
-		recv = convert_to_close(recv)
-		index := bytes.Index(recv, []byte("http://"))
-
-		if index != -1 {
-			Handle_HTTP(local, url, dest_port, bytes.Join([][]byte{recv[:index], recv[index+len([]byte("http://"))+len([]byte(host)):]}, nil))
-		} else {
-			Handle_HTTP(local, url, dest_port, recv)
+		recv, err := convert_to_close(req)
+		if err!=nil{
+			return
 		}
+		Handle_HTTP(local, url, dest_port, recv)
+
 	}
 
 }
 
 func Handle_sock5_proxy(con *net.TCPConn) {
-	_b:=make([]byte,1)
-	if _,err:=con.Read(_b);err!=nil{
+	_b := make([]byte, 1)
+	if _, err := con.Read(_b); err != nil {
 		return
 	}
-	_b,err:=util.Read_tcp_data(con,int(_b[0]))
-	if err!=nil{
+	_b, err := util.Read_tcp_data(con, int(_b[0]))
+	if err != nil {
 		return
 	}
-	for _,v:=range _b{
-		if v==0{
+	for _, v := range _b {
+		if v == 0 {
 			if _, err := con.Write([]byte{5, 0}); err != nil {
 				return
 			}
@@ -148,8 +146,32 @@ func Handle_sock5_proxy(con *net.TCPConn) {
 
 }
 
-func convert_to_close(recv []byte) ([]byte) {
-	recv = []byte(strings.Replace(string(recv), "keep-alive", "close", -1))
-	recv = []byte(strings.Replace(string(recv), "Keep-Alive", "close", -1))
-	return recv
+func convert_to_close(req *http.Request) ([]byte, error) {
+	req.Header.Del("Proxy-Connection")
+	req.Header.Del("proxy-connection")
+	req.Header.Del("Connection")
+	req.Header.Del("connection")
+
+	req.Header.Add("Connection", "close")
+	req.Header.Add("Proxy-Connection", "close")
+	buf := &bytes.Buffer{}
+	if err := req.Write(buf); err != nil {
+		return nil, err
+	}
+	_buf := make([]byte, 1024)
+	data := []byte{}
+	for {
+		i, err := buf.Read(_buf)
+		if i > 0 {
+			data = bytes.Join([][]byte{data, _buf[:i]}, nil)
+		}
+		if err != nil {
+			if err == io.EOF {
+				return data, nil
+			} else {
+				return nil, err
+			}
+		}
+	}
+
 }
