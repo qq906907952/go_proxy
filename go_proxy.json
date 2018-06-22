@@ -9,7 +9,7 @@
     "Server_port": 9393,
     "Enc_method": "chacha20",
     "Password": " miku chang wa yichibang kawaii ",
-    "Dns_addr": "169.254.169.254",
+    "Dns_addr": "100.100.2.138",
     "Dns_port": 53,
     "Dns_req_proto": "tcp"
   },
