@@ -54,7 +54,7 @@ git clone https://github.com/qq906907952/go_proxy.git
 
 
 
-如果仅需要本地代理那么修改go_proxy.json，支持http和socks5，socks5不支持udp
+如果仅需要本地代理那么修改go_proxy.json，支持http和socks5，socks5不支持udp,http不能代理ftp
 
     "Client":{
             "Ipv6":false,                     //是否尝试將域名解析ipv6地址 需要服务器支持ipv6
