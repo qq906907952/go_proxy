@@ -151,13 +151,9 @@ func convert_to_close(req *http.Request) ([]byte, error) {
 	req.Header.Del("proxy-connection")
 	req.Header.Del("Connection")
 	req.Header.Del("connection")
-
 	req.Header.Add("Connection", "close")
-	req.Header.Add("Proxy-Connection", "close")
 	buf := &bytes.Buffer{}
-	if err := req.Write(buf); err != nil {
-		return nil, err
-	}
+	req.Write(buf)
 	_buf := make([]byte, 1024)
 	data := []byte{}
 	for {
