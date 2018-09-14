@@ -40,12 +40,15 @@ func Start_local_proxy_client() {
 			util.Logger.Println("tcp accept error " + err.Error())
 			continue
 		}
-		local.SetKeepAlive(true)
-		local.SetKeepAlivePeriod(10 * time.Second)
-		go func() {
+
+		go func(local *net.TCPConn) {
 
 			defer local.Close()
 			defer util.Handle_panic()
+
+			local.SetKeepAlive(true)
+			local.SetKeepAlivePeriod(10 * time.Second)
+
 			recv := make([]byte, 1)
 			_, err = io.ReadFull(local, recv)
 
@@ -66,7 +69,7 @@ func Start_local_proxy_client() {
 
 				Handle_http_proxy(local, bytes.Join([][]byte{recv, b, o}, nil))
 			}
-		}()
+		}(local)
 
 	}
 }
@@ -76,15 +79,21 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
 	if err != nil {
+		util.Logger.Println("read http header error:"+err.Error())
 		return
+	}
+
+	host := req.Host
+	if util.Config.Connection_log{
+		util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),host)
 	}
 
 	if strings.ToUpper(req.Method) == "CONNECT" {
 
-		Handle_HTTPS(local, req.Host)
+		Handle_HTTPS(local, host)
 
 	} else {
-		host := req.Host
+
 		var dest_port int
 		var url string
 		var err error

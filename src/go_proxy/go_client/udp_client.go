@@ -35,7 +35,7 @@ func Start_UDPclien() {
 
 	syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_IP, syscall.IP_RECVORIGDSTADDR, 1)
 	syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
-	syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_SOCKET, SO_REUSEPORT, 1)
+	//syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_SOCKET, SO_REUSEPORT, 1)
 
 	for {
 		data := make([]byte, util.Udp_recv_buff)
@@ -44,22 +44,27 @@ func Start_UDPclien() {
 
 		i, oobi, _, addr, err := listen.ReadMsgUDP(data, oob)
 
-		if err != nil {
-			continue
-		}
 
-		msgs, err := syscall.ParseSocketControlMessage(oob[:oobi])
-		if err != nil {
-			continue
-		}
-
-		for _, msg := range msgs {
-			if msg.Header.Type == syscall.IP_RECVORIGDSTADDR {
-
-				go handle_udp_data(listen, addr, data[:i], msg.Data[2:8], crypt)
-				break
+		go func(data,oob []byte,n, oobn int, addr *net.UDPAddr,err error){
+			if err != nil {
+				util.Logger.Println("udp read err :" + err.Error())
 			}
-		}
+			msgs, err := syscall.ParseSocketControlMessage(oob[:oobi])
+			if err != nil {
+				util.Logger.Println("can not read udp original dest :" + err.Error())
+
+			}
+
+			for _, msg := range msgs {
+				if msg.Header.Type == syscall.IP_RECVORIGDSTADDR {
+
+					handle_udp_data(listen, addr, data[:i], msg.Data[2:8], crypt)
+					return
+				}
+			}
+		}(data,oob,i,oobi,addr,err)
+
+
 
 	}
 
@@ -83,6 +88,10 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 		binary.BigEndian.PutUint16(dns_port, uint16(util.Dns_address.Port))
 		dest_addr := bytes.Join([][]byte{dns_port, util.Dns_address.IP.To4()}, nil)
 		enc_data = crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, origin_port, data}, nil))
+		if util.Config.Connection_log {
+			util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(data))
+		}
+
 
 	} else {
 
@@ -93,7 +102,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 	con, err := net.Dial("udp", fmt.Sprintf("%s:%d", util.Config.Client.Server_addr, util.Config.Client.Server_port))
 
 	if err != nil {
-		util.Logger.Println("can not connect to server:" + err.Error())
+		util.Logger.Println("can not connect to remote:" + err.Error())
 		return
 	}
 
@@ -105,7 +114,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 
 	if werr != nil {
 
-		//util.Logger.Println("udp write to proxy server error "+werr.Error())
+		util.Logger.Println("udp write to remote error "+werr.Error())
 		return
 	}
 
@@ -115,7 +124,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 	i, err := remote.Read(recv)
 
 	if err != nil {
-
+		util.Logger.Println("udp read from remote error "+werr.Error())
 		return
 	}
 

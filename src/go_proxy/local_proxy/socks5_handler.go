@@ -5,6 +5,7 @@ import (
 	"go_proxy/util"
 	"bytes"
 	"encoding/binary"
+	"strconv"
 )
 
 func handle_socks5_tcp(local *net.TCPConn, request []byte) {
@@ -68,16 +69,22 @@ func handle_domain(local *net.TCPConn) {
 	}
 
 	domain, err := util.Read_tcp_data(local, int(domain_len[0]))
+	if err != nil {
+		util.Logger.Println("read socks5 domain error:"+err.Error())
+		return
+	}
 
 	port, err := util.Read_tcp_data(local, 2)
 	if err != nil {
-
+		util.Logger.Println("read socks5 port error:"+err.Error())
 		return
 	}
 	dest_domain := string(domain)
 
 	if util.Is_domain(dest_domain) {
-
+		if util.Config.Connection_log{
+			util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_domain+":"+strconv.Itoa(int(binary.BigEndian.Uint16(port))))
+		}
 		is_cn_domain, err := util.Is_china_domain(dest_domain)
 		if err != nil {
 			return
@@ -110,22 +117,30 @@ func handle_domain(local *net.TCPConn) {
 
 		}
 	} else {
-		ip := net.ParseIP(string(domain))
-		if ip.To4() != nil {
-			handle_ip(local, ip.To4(), port)
-		} else if ip.To16() != nil {
+		ip := net.ParseIP(dest_domain)
+		if ip!=nil{
 			handle_ip(local, ip.To16(), port)
-		} else {
-			return
+		}else{
+			util.Logger.Println("socks5 recv a unknow addr:"+dest_domain)
 		}
+
+
 	}
 }
 
 func handle_ip(local *net.TCPConn, ip, port []byte) {
+	dest_ip:=&net.IPAddr{
+		IP:   ip,
+		Zone: "",
+	}
+	dest_port:=int(binary.BigEndian.Uint16(port))
+	if util.Config.Connection_log{
+		util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_ip.String()+":"+strconv.Itoa(dest_port))
+	}
 	is_cn := false
 	var err error
 	if len(ip) == 4 {
-		is_cn, err = util.Is_china_ipv4_addr(net.IP{ip[0], ip[1], ip[2], ip[3]}.String())
+		is_cn, err = util.Is_china_ipv4_addr(dest_ip.String())
 		if err != nil {
 
 			return
@@ -133,10 +148,7 @@ func handle_ip(local *net.TCPConn, ip, port []byte) {
 
 	}
 
-	handle_connection(local, &net.IPAddr{
-		IP:   ip,
-		Zone: "",
-	}, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn)
+	handle_connection(local, dest_ip, dest_port, nil, construct_sock5_reply(), is_cn)
 
 }
 

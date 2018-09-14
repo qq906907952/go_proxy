@@ -4,12 +4,12 @@
     "Ipv6":false,
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
-    "Local_port": 3939,
-    "Server_addr": "0.0.0.0",
-    "Server_port": 9393,
+    "Local_port": 39393,
+    "Server_addr": "47.91.158.181",
+    "Server_port": 1234,
     "Enc_method": "chacha20",
-    "Password": " miku chang wa yichiban kawaii  ",
-    "Dns_addr": "100.100.2.138",
+    "Password": " miku chang wa yichibann kawaii ",
+    "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
     "Dns_req_proto": "tcp"
   },
@@ -21,14 +21,15 @@
       {
         "Listen_port":9393,
         "Enc_method": "chacha20",
-        "Password": " miku chang wa yichibang kawaii "
+        "Password": " miku chang wa yichibann kawaii "
       }
     ]
 
   },
 
   "Udp_relay":true,
-  "Ulimit":1024000
+  "Ulimit":1024000,
+  "connection_log":true
 
 }
 

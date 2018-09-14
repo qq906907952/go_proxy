@@ -19,6 +19,7 @@ func Handle_HTTP(local *net.TCPConn, host string, dest_port int, data []byte) {
 		is_cn, err := util.Is_china_domain(url)
 
 		if err != nil {
+			util.Logger.Println("cn domain decision error:"+err.Error())
 			return
 		}
 
@@ -96,7 +97,7 @@ func Handle_HTTPS(local *net.TCPConn, host string) {
 		is_cn, err := util.Is_china_domain(url)
 
 		if err != nil {
-
+			util.Logger.Println("cn domain decision error:"+err.Error())
 			return
 		}
 

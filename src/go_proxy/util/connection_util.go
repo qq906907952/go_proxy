@@ -131,7 +131,7 @@ func Read_at_least_byte(con *net.TCPConn, b []byte) ([]byte, []byte, error) {
 		if i > 0 {
 			recv = bytes.Join([][]byte{recv, temp[:i]}, nil)
 			if ii := bytes.Index(recv, b); ii != -1 {
-				return recv[:ii], recv[ii:], nil
+				return recv[:ii+len(b)], recv[ii+len(b):], nil
 			}
 			continue
 		}

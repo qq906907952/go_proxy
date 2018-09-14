@@ -48,20 +48,19 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	dest, request_type, err := handshake(con, crypt)
 
 	if err != nil {
-
+		util.Logger.Println("tcp handshake error:"+err.Error())
 		return
 	}
 
 
 	if request_type == util.Udp_conn {
-
 		ns, err := net.DialUDP("udp", nil, &net.UDPAddr{
 			IP:   dest.IP,
 			Port: dest.Port,
 			Zone: "",
 		})
 		if err != nil {
-			util.Logger.Println("cant not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
+			util.Logger.Println("udp2tcp : can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
 		defer ns.Close()
@@ -88,6 +87,10 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			if err != nil {
 				return
 			}
+			if util.Config.Connection_log {
+				util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(dec_data))
+			}
+
 			if _, err := ns.Write(dec_data); err != nil {
 				return
 			}
@@ -98,7 +101,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 		target, err := net.DialTCP("tcp", nil, dest)
 		if err != nil {
-			util.Logger.Println("cant not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
+			util.Logger.Println("tcp can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
 		defer target.Close()
@@ -115,7 +118,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 func handshake(con *net.TCPConn, crypt util.Crypt_interface) (*net.TCPAddr, int, error) {
 	data, err := crypt.Read(con)
 	if len(data) < 15 || (data[8] != 1 && data[8] != 0 ) || int(data[9]) > len(data[10:]) {
-		util.Logger.Println("len error:data len too short ")
+		util.Logger.Println("len error:data len illegal ")
 		return nil, 0, errors.New("len error")
 	}
 	timestamp := binary.BigEndian.Uint64(data[:8])
@@ -123,17 +126,23 @@ func handshake(con *net.TCPConn, crypt util.Crypt_interface) (*net.TCPAddr, int,
 		if err != nil {
 			return nil, 0, err
 		} else {
-			util.Logger.Println("time error : time is pass than 60 seconds from " + con.RemoteAddr().String())
-			return nil, 0, errors.New("time is pass than 60 seconds ")
+
+			return nil, 0, errors.New("time was pass more than 60 seconds ")
 		}
 	}
 
 	dest_addr := data[10:10+data[9]]
-
+	if len(dest_addr[2:])!=4 &&  len(dest_addr[2:])!=16{
+		return nil,0,errors.New("ip len error")
+	}
 	dest := &net.TCPAddr{
 		IP:   dest_addr[2:],
 		Port: int(binary.BigEndian.Uint16(dest_addr[:2])),
 		Zone: "",
+	}
+
+	if util.Config.Connection_log{
+		util.Logger.Printf("connection log:%s connect to %s" ,con.RemoteAddr().String(),dest.String())
 	}
 	request_type := int(data[8])
 
