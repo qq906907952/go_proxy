@@ -20,9 +20,10 @@ var Config config
 var Group sync.WaitGroup
 
 type config struct {
-	Udp_relay bool
+
 	Ulimit    uint64
 	Connection_log bool
+	Udp_timeout int64
 	Client struct {
 		Turn          bool
 		Ipv6          bool
@@ -69,8 +70,8 @@ func init() {
 		log.Fatal(jerr)
 	}
 
-	if Config.Client.Turn && Config.Server.Turn {
-		log.Fatal("server and client can not be turn on in the same machine")
+	if Config.Client.Turn && Config.Server.Turn && Config.Client.Local_proxy{
+		log.Fatal("server,client,local just can turn on one")
 	}
 
 	if Config.Client.Turn && Config.Client.Local_proxy {
@@ -133,7 +134,8 @@ func init() {
 	}else{
 		fmt.Printf("remote server %s:%d\r\n",Config.Client.Server_addr,Config.Client.Server_port)
 	}
-
-
+	if Config.Udp_timeout==0{
+		Config.Udp_timeout=30
+	}
 
 }

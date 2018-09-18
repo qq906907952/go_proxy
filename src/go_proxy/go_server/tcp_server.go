@@ -60,7 +60,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			Zone: "",
 		})
 		if err != nil {
-			util.Logger.Println("udp2tcp : can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
+			util.Logger.Println("can not dial udp from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
 		defer ns.Close()
@@ -70,6 +70,10 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			defer con.Close()
 			answer := make([]byte, util.Udp_recv_buff)
 			for {
+				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)));err!=nil{
+					util.Logger.Println("set udp read deadline error" + err.Error())
+					return
+				}
 				i, err := ns.Read(answer)
 				if i > 0 {
 					if err := crypt.Write(con, answer[:i]); err != nil {
@@ -83,11 +87,15 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 		}()
 
 		for {
+			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)));err!=nil{
+				util.Logger.Println("set udp read deadline error" + err.Error())
+				return
+			}
 			dec_data, err := crypt.Read(con)
 			if err != nil {
 				return
 			}
-			if util.Config.Connection_log {
+			if dest.Port==53 && util.Config.Connection_log {
 				util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(dec_data))
 			}
 

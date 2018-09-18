@@ -13,6 +13,7 @@ import (
 	"os"
 	"io"
 	"sync"
+	"time"
 )
 
 var Dns_address *net.UDPAddr
@@ -265,6 +266,10 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		if err := crypt.Write(con, request); err != nil {
 			return nil, err
 		}
+		if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
+			Logger.Println("set udp read deadline error" + err.Error())
+			return nil,err
+		}
 		answer, err := crypt.Read(con)
 		if len(answer) > len(request) {
 
@@ -296,9 +301,8 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		var forward_dns_request = func(qtype uint16) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
-			origin_port := make([]byte, 2)
-			rand.Read(origin_port)
-			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, origin_port, request}, nil)))
+
+			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, []byte{6,0,0,0,0,0,0}, request}, nil)))
 			data := make([]byte, Udp_recv_buff)
 			i, err := con.Read(data)
 			if err != nil {
@@ -309,7 +313,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 				return nil, err
 			}
 			if len(answer) < len(request)+12 {
-				return nil, errors.New("len is illegal")
+				return nil, errors.New("recv len is illegal")
 			}
 
 			return Get_record_from_answer(answer[len(request):], qtype)

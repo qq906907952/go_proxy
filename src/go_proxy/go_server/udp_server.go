@@ -7,9 +7,18 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"syscall"
-	"go_proxy/go_client"
-	"os"
+	"sync"
+	"time"
+)
+
+type udp_route struct {
+	socket  *net.UDPConn
+	send_to *net.UDPAddr
+}
+
+var (
+	route_map = map[string]*udp_route{}
+	lock      = sync.RWMutex{}
 )
 
 func Start_UDPserver(port int, crypt util.Crypt_interface) {
@@ -35,7 +44,7 @@ func Start_UDPserver(port int, crypt util.Crypt_interface) {
 		i, addr, err := listen.ReadFromUDP(recv_data)
 
 		if err != nil {
-			util.Logger.Println("udp recv err:"+err.Error())
+			util.Logger.Println("udp recv err:" + err.Error())
 			continue
 		}
 
@@ -55,120 +64,100 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		return
 	}
 	dest_addr_len := dec_data[0]
-	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+4 {
+
+	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+14 {
+		util.Logger.Println("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
+		return
+	}
+	origin_addr_len := dec_data[int(dest_addr_len)+1]
+	if origin_addr_len < 6 || len(dec_data) < int(origin_addr_len+dest_addr_len)+2 {
 		util.Logger.Println("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
 		return
 	}
 
 	dest_port := binary.BigEndian.Uint16(dec_data[1:3])
-	dest_ip:=dec_data[3:dest_addr_len+1]
-	origin_port := binary.BigEndian.Uint16(dec_data[dest_addr_len+1:dest_addr_len+3])
-	real_data:=dec_data[dest_addr_len+3:]
-	if dest_port==53{
+	dest_ip := dec_data[3 : dest_addr_len+1]
+	origin_port := binary.BigEndian.Uint16(dec_data[dest_addr_len+2 : dest_addr_len+4])
+	origin_ip := dec_data[dest_addr_len+4 : dest_addr_len+4+origin_addr_len-2]
+
+	real_data := dec_data[dest_addr_len+origin_addr_len+2:]
+	if dest_port == 53 {
 		util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(real_data))
 	}
 
-	//dest_addr := &net.UDPAddr{
-	//	IP:   dec_data[3:dest_addr_len+1],
-	//	Port: ,
-	//	Zone: "",
-	//}
+	origin_addr := net.UDPAddr{
+		IP:   origin_ip,
+		Port: int(origin_port),
+	}
+
+	dest_addr := &net.UDPAddr{
+		IP:   dest_ip,
+		Port: int(dest_port),
+	}
+
+	var
+	(
+		route *udp_route
+		ok    bool
+	)
 
 
-	var dest_addr syscall.Sockaddr
-	var source_addr syscall.Sockaddr
+
+	lock.RLock()
+	route, ok = route_map[origin_addr.String()+":"+udp_addr.IP.String()]
+	lock.RUnlock()
 
 
-	if len(dest_ip)==4{
-		addr:=[4]byte{}
-		for i,v:=range dest_ip{
-			addr[i]=v
+	if !ok {
+		con, err := net.ListenUDP("udp", nil)
+		if err != nil {
+			util.Logger.Println("dial udp error:" + err.Error())
+			return
 		}
-		dest_addr=&syscall.SockaddrInet4{
-			Port: int(dest_port),
-			Addr: addr,
+
+		route = &udp_route{
+			socket:  con,
+			send_to: udp_addr,
 		}
-		source_addr=&syscall.SockaddrInet4{
-			Port: int(origin_port),
-			Addr: [4]byte{},
+
+
+
+		lock.Lock()
+		route_map[origin_addr.String()+":"+udp_addr.IP.String()] = route
+		lock.Unlock()
+		defer func(){
+			lock.Lock()
+			delete(route_map,origin_addr.String()+":"+udp_addr.IP.String())
+			lock.Unlock()
+			con.Close()
+		}()
+
+	} else {
+		route.send_to = udp_addr
+	}
+
+
+	route.socket.WriteTo(real_data, dest_addr)
+	if !ok{
+		recv := make([]byte, util.Udp_recv_buff)
+		for {
+
+			if err := route.socket.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout) * time.Second)); err != nil {
+				util.Logger.Println("set udp read deadline error" + err.Error())
+				return
+			}
+
+			i, err := route.socket.Read(recv)
+
+			if i > 0 {
+				server.WriteToUDP(crypt.Encrypt(recv[:i]), route.send_to)
+			}
+
+			if err != nil {
+				return
+			}
 		}
-	}else if  len(dest_ip)==16{
-		addr:=[16]byte{}
-		for i,v:=range dest_ip{
-			addr[i]=v
-		}
-		dest_addr=&syscall.SockaddrInet6{
-			Port: int(dest_port),
-			Addr: addr,
-		}
-		source_addr=&syscall.SockaddrInet6{
-			Port: int(origin_port),
-			Addr: [16]byte{},
-		}
-	}else{
-		util.Logger.Println("udp:illegal ip len ,unknow ip type from " + udp_addr.String() + " : " + err.Error())
-		return
 	}
 
-	f, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
-	if err != nil {
-		util.Logger.Println("udp create socket error:"+err.Error())
-		return
-	}
-	if err := syscall.SetsockoptInt(f, syscall.SOL_SOCKET, go_client.SO_REUSEPORT, 1); err != nil {
-		util.Logger.Println("udp set socket option error:"+err.Error())
-		return
-	}
-	if err := syscall.Bind(f, source_addr); err != nil {
-		util.Logger.Println("udp socket bind error:"+err.Error())
-		return
-	}
-
-	if err:=syscall.Connect(f, dest_addr);err!=nil{
-		util.Logger.Println("udp socket connect error:"+err.Error())
-		return
-	}
-
-	_target,err:=net.FileConn(os.NewFile(uintptr(f),""))
-	target:=_target.(*net.UDPConn)
-
-
-
-	//
-	//target, err := net.DialUDP("udp", &net.UDPAddr{
-	//	IP:   nil,
-	//	Port: int(origin_port),
-	//	Zone: "",
-	//}, dest_addr)
-
-
-
-
-	if err != nil {
-		util.Logger.Println("udp : can not open fd from "+udp_addr.String() )
-		return
-	}
-
-	defer target.Close()
-
-	if _, werr := target.Write(real_data); werr != nil {
-
-		return
-	}
-
-	//util.Logger.Println("udp  from " + udp_addr.IP.String() + " connected to " + target.RemoteAddr().String())
-
-	recv := make([]byte, util.Udp_recv_buff)
-	i, rerr := target.Read(recv)
-	if rerr != nil {
-
-		return
-	}
-
-	enc_data := crypt.Encrypt(recv[:i])
-
-	if _, werr := server.WriteToUDP(enc_data, udp_addr); werr != nil {
-		return
-	}
 
 }

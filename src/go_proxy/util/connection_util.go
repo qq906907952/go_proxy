@@ -185,3 +185,4 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 	}
 
 }
+
