@@ -70,7 +70,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			defer con.Close()
 			answer := make([]byte, util.Udp_recv_buff)
 			for {
-				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)));err!=nil{
+				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
 					util.Logger.Println("set udp read deadline error" + err.Error())
 					return
 				}
@@ -87,7 +87,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 		}()
 
 		for {
-			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)));err!=nil{
+			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
 				util.Logger.Println("set udp read deadline error" + err.Error())
 				return
 			}
@@ -96,7 +96,12 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 				return
 			}
 			if dest.Port==53 && util.Config.Connection_log {
-				util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(dec_data))
+				go func(){
+					domain:=util.Get_domain_name_from_request(dec_data)
+					if domain!=""{
+						util.Logger.Printf("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
+					}
+				}()
 			}
 
 			if _, err := ns.Write(dec_data); err != nil {

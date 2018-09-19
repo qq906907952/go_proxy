@@ -81,8 +81,14 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	origin_ip := dec_data[dest_addr_len+4 : dest_addr_len+4+origin_addr_len-2]
 
 	real_data := dec_data[dest_addr_len+origin_addr_len+2:]
-	if dest_port == 53 {
-		util.Logger.Println("connection log:maybe domain parse request. data_str:" + string(real_data))
+
+	if dest_port == 53 && util.Config.Connection_log{
+		go func(){
+			domain:=util.Get_domain_name_from_request(real_data)
+			if domain!=""{
+				util.Logger.Printf("connection log:%s query domain name %s" ,udp_addr.String(), domain)
+			}
+		}()
 	}
 
 	origin_addr := net.UDPAddr{

@@ -1,8 +1,8 @@
 {
   "Client":{
-    "Turn":true,
+    "Turn":false,
     "Ipv6":false,
-    "Local_proxy":false,
+    "Local_proxy":true,
     "Local_addr":"0.0.0.0",
     "Local_port": 3939,
     "Server_addr": "0.0.0.0",
@@ -29,7 +29,7 @@
 
   "Ulimit":1024000,
   "Connection_log":true,
-  "Udp_timeout":60
+  "Udp_timeout":30
 
 }
 
