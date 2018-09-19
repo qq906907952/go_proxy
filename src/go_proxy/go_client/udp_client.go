@@ -172,6 +172,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			dec_data, err := crypt.Decrypt(recv[:i])
 
 			if err != nil {
+				util.Logger.Println("decrypt err:"+err.Error())
 				return
 			}
 			syscall.Write(fd, dec_data)

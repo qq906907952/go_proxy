@@ -1,14 +1,20 @@
 package main
 
 import (
-	"go_proxy/util"
+	"net"
 	"fmt"
 )
 
 func main() {
-	dns:=util.DNSStruct{
-
+	l,err:=net.DialTCP("tcp",nil,&net.TCPAddr{
+		IP:  net.ParseIP("172.217.31.238"),
+		Port: 80,
+		Zone: "",
+	})
+	if err!=nil{
+		panic(err)
 	}
-	dns.Fill_question("baidu.com",util.A_record)
-	fmt.Println(util.Get_domain_name_from_request(dns.Marshal_request()))
+	fmt.Println(l.Close())
+	fmt.Println(l.Close())
 }
+

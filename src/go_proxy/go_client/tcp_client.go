@@ -51,6 +51,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	addr, err := util.Get_tcp_origin_dest(con)
 	if err != nil {
 		util.Logger.Println("tcp can not read the origin dest:" + err.Error())
+		return
 	}
 
 	dest := addr.Multiaddr[2:8]
@@ -69,6 +70,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	remote, err := util.Connect_to_server(crypt,util.Tcp_conn, int(binary.BigEndian.Uint16(dest[:2])), dest[2:])
 	if err != nil {
 		util.Logger.Println("connection to remote error:"+err.Error())
+		return
 	}
 	defer remote.Close()
 
