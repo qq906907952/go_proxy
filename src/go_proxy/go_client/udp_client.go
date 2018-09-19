@@ -101,7 +101,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			go func(){
 				domain:=util.Get_domain_name_from_request(data)
 				if domain!=""{
-					util.Logger.Printf("connection log:%s query domain name %s" + domain)
+					util.Logger.Printf("connection log:%s query domain name %s" ,udp_addr.String(), domain)
 				}
 			}()
 		}

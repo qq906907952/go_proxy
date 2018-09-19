@@ -70,13 +70,12 @@ func init() {
 		log.Fatal(jerr)
 	}
 
-	if Config.Client.Turn && Config.Server.Turn && Config.Client.Local_proxy{
-		log.Fatal("server,client,local just can turn on one")
-	}
 
 	if Config.Client.Turn && Config.Client.Local_proxy {
 		log.Fatal("client and http_proxy can not be turn on in the same machine")
 	}
+
+
 	if Config.Client.Dns_req_proto != "tcp" && Config.Client.Dns_req_proto != "udp" {
 		log.Fatal("dns request protocol is not support")
 	}
