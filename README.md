@@ -15,8 +15,7 @@ git clone https://github.com/qq906907952/go_proxy.git
 -------
     {
 
-    "Udp_relay":true,                    //udp中继，必须打开
-
+    "Udp_timeout":60,                    //udp超时时间
     "Ulimit":1024000,                    //linux最大打开文件数(最大打开连接数)，取值范围0-1048576
 
     }
@@ -56,7 +55,7 @@ git clone https://github.com/qq906907952/go_proxy.git
 
 
 
-如果仅需要本地代理那么修改go_proxy.json，支持http和socks5，socks5不支持udp
+如果仅需要本地代理那么修改go_proxy.json，支持http和socks5，socks5不支持udp,http不能代理ftp
 
     "Client":{
             "Ipv6":false,                     //是否尝试將域名解析ipv6地址 需要服务器支持ipv6

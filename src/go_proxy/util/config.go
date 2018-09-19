@@ -20,9 +20,10 @@ var Config config
 var Group sync.WaitGroup
 
 type config struct {
-	Udp_relay bool
-	Ulimit    uint64
 
+	Ulimit    uint64
+	Connection_log bool
+	Udp_timeout int64
 	Client struct {
 		Turn          bool
 		Ipv6          bool
@@ -69,17 +70,16 @@ func init() {
 		log.Fatal(jerr)
 	}
 
-	if Config.Client.Turn && Config.Server.Turn {
-		log.Fatal("server and client can not be turn on in the same machine")
-	}
 
 	if Config.Client.Turn && Config.Client.Local_proxy {
 		log.Fatal("client and http_proxy can not be turn on in the same machine")
 	}
+
+
 	if Config.Client.Dns_req_proto != "tcp" && Config.Client.Dns_req_proto != "udp" {
 		log.Fatal("dns request protocol is not support")
 	}
-	if net.ParseIP(Config.Client.Local_addr).To4() == nil && net.ParseIP(Config.Client.Local_addr).To16() == nil {
+	if net.ParseIP(Config.Client.Local_addr)==nil  {
 		log.Fatal("local address seem invalid ")
 	}
 	Dns_address = &net.UDPAddr{
@@ -87,7 +87,9 @@ func init() {
 		Port: Config.Client.Dns_port,
 		Zone: "",
 	}
-
+	if Dns_address.IP==nil{
+		panic("Dns_addr illegal")
+	}
 	china_ipv4_list, err := os.Open("china_ipv4")
 	if err != nil {
 		return
@@ -118,6 +120,21 @@ func init() {
 			}
 			china_ipv4[ipint]=mask
 		}
+	}
+	if net.ParseIP(Config.Client.Server_addr)==nil{
+		domain:=Config.Client.Server_addr
+		ns,err:=net.LookupIP(domain)
+		if err!=nil{
+			panic(err)
+		}
+		Config.Client.Server_addr=ns[0].String()
+		fmt.Printf("remote server %s,ip parse:%s:%d\r\n",domain,Config.Client.Server_addr,Config.Client.Server_port)
+
+	}else{
+		fmt.Printf("remote server %s:%d\r\n",Config.Client.Server_addr,Config.Client.Server_port)
+	}
+	if Config.Udp_timeout==0{
+		Config.Udp_timeout=30
 	}
 
 }

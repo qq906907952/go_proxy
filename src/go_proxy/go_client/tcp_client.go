@@ -51,14 +51,25 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	addr, err := util.Get_tcp_origin_dest(con)
 	if err != nil {
 		util.Logger.Println("tcp can not read the origin dest:" + err.Error())
+		return
 	}
 
 	dest := addr.Multiaddr[2:8]
 
-	//connect to  the proxy server
 
+
+	if util.Config.Connection_log{
+		_dest := &net.TCPAddr{
+			IP:   dest[2:],
+			Port: int(binary.BigEndian.Uint16(dest[:2])),
+		}
+		util.Logger.Printf("connection log:%s connect to %s" ,con.RemoteAddr().String(),_dest.String())
+	}
+
+	//connect to  the proxy server
 	remote, err := util.Connect_to_server(crypt,util.Tcp_conn, int(binary.BigEndian.Uint16(dest[:2])), dest[2:])
 	if err != nil {
+		util.Logger.Println("connection to remote error:"+err.Error())
 		return
 	}
 	defer remote.Close()
