@@ -23,13 +23,13 @@ func Start_TCPserver(port int, crypt util.Crypt_interface) {
 
 	}
 
-	util.Logger.Println("TCP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
+	util.Print_log("TCP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
 	fmt.Println("TCP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
 
 	for {
 		tcp_con, err := listen.AcceptTCP()
 		if err != nil {
-			util.Logger.Println("tcp accept error " + err.Error())
+			util.Print_log("tcp accept error " + err.Error())
 			continue
 		}
 
@@ -48,7 +48,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	dest, request_type, err := handshake(con, crypt)
 
 	if err != nil {
-		util.Logger.Println("tcp handshake error:"+err.Error())
+		util.Print_log("tcp handshake error:"+err.Error())
 		return
 	}
 
@@ -60,7 +60,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			Zone: "",
 		})
 		if err != nil {
-			util.Logger.Println("can not dial udp from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
+			util.Print_log("can not dial udp from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
 		defer ns.Close()
@@ -71,7 +71,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			answer := make([]byte, util.Udp_recv_buff)
 			for {
 				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
-					util.Logger.Println("set udp read deadline error" + err.Error())
+					util.Print_log("set udp read deadline error" + err.Error())
 					return
 				}
 				i, err := ns.Read(answer)
@@ -88,7 +88,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 		for {
 			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
-				util.Logger.Println("set udp read deadline error" + err.Error())
+				util.Print_log("set udp read deadline error" + err.Error())
 				return
 			}
 			dec_data, err := crypt.Read(con)
@@ -99,7 +99,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 				go func(){
 					domain:=util.Get_domain_name_from_request(dec_data)
 					if domain!=""{
-						util.Logger.Printf("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
+						util.Print_log("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
 					}
 				}()
 			}
@@ -114,7 +114,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 		target, err := net.DialTCP("tcp", nil, dest)
 		if err != nil {
-			util.Logger.Println("tcp can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
+			util.Print_log("tcp can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
 		defer target.Close()
@@ -122,7 +122,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 		target.SetKeepAlivePeriod(10*time.Second)
 		util.Connection_loop(target, con, crypt)
 	} else {
-		util.Logger.Println("unknow connect type from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port))
+		util.Print_log("unknow connect type from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port))
 		return
 	}
 
@@ -131,7 +131,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 func handshake(con *net.TCPConn, crypt util.Crypt_interface) (*net.TCPAddr, int, error) {
 	data, err := crypt.Read(con)
 	if len(data) < 15 || (data[8] != 1 && data[8] != 0 ) || int(data[9]) > len(data[10:]) {
-		util.Logger.Println("len error:data len illegal ")
+		util.Print_log("len error:data len illegal ")
 		return nil, 0, errors.New("len error")
 	}
 	timestamp := binary.BigEndian.Uint64(data[:8])
@@ -155,7 +155,7 @@ func handshake(con *net.TCPConn, crypt util.Crypt_interface) (*net.TCPAddr, int,
 	}
 
 	if util.Config.Connection_log{
-		util.Logger.Printf("connection log:%s connect to %s" ,con.RemoteAddr().String(),dest.String())
+		util.Print_log("connection log:%s connect to %s" ,con.RemoteAddr().String(),dest.String())
 	}
 	request_type := int(data[8])
 

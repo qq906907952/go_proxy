@@ -26,13 +26,13 @@ func Start_TCPclient() {
 
 	}
 
-	util.Logger.Println("client listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port) + " remote server " + util.Config.Client.Server_addr + ":" + strconv.Itoa(util.Config.Client.Server_port))
+	util.Print_log("client listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port) + " remote server " + util.Config.Client.Server_addr + ":" + strconv.Itoa(util.Config.Client.Server_port))
 	fmt.Println("client listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port) + " remote server " + util.Config.Client.Server_addr + ":" + strconv.Itoa(util.Config.Client.Server_port))
 
 	for {
 		tcp_con, err := tcp_listen.AcceptTCP()
 		if err != nil {
-			util.Logger.Println("tcp accept error " + err.Error())
+			util.Print_log("tcp accept error " + err.Error())
 			continue
 		}
 
@@ -50,7 +50,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	con.SetKeepAlivePeriod(10*time.Second)
 	addr, err := util.Get_tcp_origin_dest(con)
 	if err != nil {
-		util.Logger.Println("tcp can not read the origin dest:" + err.Error())
+		util.Print_log("tcp can not read the origin dest:" + err.Error())
 		return
 	}
 
@@ -63,13 +63,13 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			IP:   dest[2:],
 			Port: int(binary.BigEndian.Uint16(dest[:2])),
 		}
-		util.Logger.Printf("connection log:%s connect to %s" ,con.RemoteAddr().String(),_dest.String())
+		util.Print_log("connection log:%s connect to %s" ,con.RemoteAddr().String(),_dest.String())
 	}
 
 	//connect to  the proxy server
 	remote, err := util.Connect_to_server(crypt,util.Tcp_conn, int(binary.BigEndian.Uint16(dest[:2])), dest[2:])
 	if err != nil {
-		util.Logger.Println("connection to remote error:"+err.Error())
+		util.Print_log("connection to remote error:"+err.Error())
 		return
 	}
 	defer remote.Close()

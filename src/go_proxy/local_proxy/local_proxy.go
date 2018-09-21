@@ -32,12 +32,12 @@ func Start_local_proxy_client() {
 	}
 
 	fmt.Println("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
-	util.Logger.Println("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
+	util.Print_log("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
 
 	for {
 		local, err := lcoal_listen.AcceptTCP()
 		if err != nil {
-			util.Logger.Println("tcp accept error " + err.Error())
+			util.Print_log("tcp accept error " + err.Error())
 			continue
 		}
 
@@ -79,13 +79,13 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
 	if err != nil {
-		util.Logger.Println("read http header error:"+err.Error())
+		util.Print_log("read http header error:"+err.Error())
 		return
 	}
 
 	host := req.Host
 	if util.Config.Connection_log{
-		util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),host)
+		util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),host)
 	}
 
 	if strings.ToUpper(req.Method) == "CONNECT" {

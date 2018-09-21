@@ -47,11 +47,11 @@ func Start_UDPclien() {
 
 		go func(data, oob []byte, n, oobn int, addr *net.UDPAddr, err error) {
 			if err != nil {
-				util.Logger.Println("udp read err :" + err.Error())
+				util.Print_log("udp read err :" + err.Error())
 			}
 			msgs, err := syscall.ParseSocketControlMessage(oob[:oobi])
 			if err != nil {
-				util.Logger.Println("can not read udp original dest :" + err.Error())
+				util.Print_log("can not read udp original dest :" + err.Error())
 
 			}
 
@@ -71,7 +71,7 @@ func Start_UDPclien() {
 func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byte, crypt util.Crypt_interface) {
 
 	if udp_addr.IP.To4() == nil {
-		util.Logger.Println("iptables transparent not support ipv6")
+		util.Print_log("iptables transparent not support ipv6")
 		return
 	}
 
@@ -101,7 +101,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			go func(){
 				domain:=util.Get_domain_name_from_request(data)
 				if domain!=""{
-					util.Logger.Printf("connection log:%s query domain name %s" ,udp_addr.String(), domain)
+					util.Print_log("connection log:%s query domain name %s" ,udp_addr.String(), domain)
 				}
 			}()
 		}
@@ -115,7 +115,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 	con, err := net.Dial("udp", fmt.Sprintf("%s:%d", util.Config.Client.Server_addr, util.Config.Client.Server_port))
 
 	if err != nil {
-		util.Logger.Println("can not connect to remote:" + err.Error())
+		util.Print_log("can not connect to remote:" + err.Error())
 		return
 	}
 
@@ -127,7 +127,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 
 	if werr != nil {
 
-		util.Logger.Println("udp write to remote error " + werr.Error())
+		util.Print_log("udp write to remote error " + werr.Error())
 		return
 	}
 
@@ -158,13 +158,13 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 		Port: udp_addr.Port,
 		Addr: sour_ip,
 	}); err != nil {
-		util.Logger.Println("create udp socket error:" + err.Error())
+		util.Print_log("create udp socket error:" + err.Error())
 		return
 	}
 
 	for {
 		if err := remote.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout) * time.Second)); err != nil {
-			util.Logger.Println("set udp read deadline error" + err.Error())
+			util.Print_log("set udp read deadline error" + err.Error())
 			return
 		}
 		i, err := remote.Read(recv)
@@ -172,9 +172,10 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			dec_data, err := crypt.Decrypt(recv[:i])
 
 			if err != nil {
-				util.Logger.Println("decrypt err:"+err.Error())
+				util.Print_log("decrypt err:"+err.Error())
 				return
 			}
+			
 			syscall.Write(fd, dec_data)
 		}
 

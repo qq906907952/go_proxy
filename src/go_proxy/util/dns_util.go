@@ -300,7 +300,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 			for{
 				if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
-					Logger.Println("set tcp read deadline error" + err.Error())
+					Print_log("set tcp read deadline error" + err.Error())
 					return nil,err
 				}
 				answer, err := crypt.Read(con)
@@ -333,7 +333,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		for{
 			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
-				Logger.Println("set tcp read deadline error" + err.Error())
+				Print_log("set tcp read deadline error" + err.Error())
 				return nil,err
 			}
 			answer, err := crypt.Read(con)
@@ -385,7 +385,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 			for{
 				if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
-					Logger.Println("set udp read deadline error" + err.Error())
+					Print_log("set udp read deadline error" + err.Error())
 					return nil,err
 				}
 				i, err := con.Read(data)

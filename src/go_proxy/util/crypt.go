@@ -154,7 +154,7 @@ func read_data(con *net.TCPConn, crypt Crypt_interface) ([]byte, error) {
 	if enc_data != nil {
 		dec_data, err := crypt.Decrypt(enc_data)
 		if err!=nil{
-			Logger.Println("decrypt err:"+err.Error())
+			Log.Println("decrypt err:"+err.Error())
 		}
 		return dec_data, err
 	} else {

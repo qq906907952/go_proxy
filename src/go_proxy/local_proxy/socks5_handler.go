@@ -70,20 +70,20 @@ func handle_domain(local *net.TCPConn) {
 
 	domain, err := util.Read_tcp_data(local, int(domain_len[0]))
 	if err != nil {
-		util.Logger.Println("read socks5 domain error:"+err.Error())
+		util.Print_log("read socks5 domain error:"+err.Error())
 		return
 	}
 
 	port, err := util.Read_tcp_data(local, 2)
 	if err != nil {
-		util.Logger.Println("read socks5 port error:"+err.Error())
+		util.Print_log("read socks5 port error:"+err.Error())
 		return
 	}
 	dest_domain := string(domain)
 
 	if util.Is_domain(dest_domain) {
 		if util.Config.Connection_log{
-			util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_domain+":"+strconv.Itoa(int(binary.BigEndian.Uint16(port))))
+			util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_domain+":"+strconv.Itoa(int(binary.BigEndian.Uint16(port))))
 		}
 		is_cn_domain, err := util.Is_china_domain(dest_domain)
 		if err != nil {
@@ -94,7 +94,7 @@ func handle_domain(local *net.TCPConn) {
 			ip, err := net.ResolveIPAddr("ip", dest_domain)
 
 			if err != nil {
-				util.Logger.Println("can not reslove domain:" + dest_domain + " " + err.Error())
+				util.Print_log("can not reslove domain:" + dest_domain + " " + err.Error())
 				return
 			}
 
@@ -105,7 +105,7 @@ func handle_domain(local *net.TCPConn) {
 			dest_ip, err := util.Parse_not_cn_domain(string(domain), crypt)
 
 			if err != nil {
-				util.Logger.Println("can not reslove domain:" + dest_domain + " " + err.Error())
+				util.Print_log("can not reslove domain:" + dest_domain + " " + err.Error())
 				return
 			}
 
@@ -121,7 +121,7 @@ func handle_domain(local *net.TCPConn) {
 		if ip!=nil{
 			handle_ip(local, ip.To16(), port)
 		}else{
-			util.Logger.Println("socks5 recv a unknow addr:"+dest_domain)
+			util.Print_log("socks5 recv a unknow addr:"+dest_domain)
 		}
 
 
@@ -135,7 +135,7 @@ func handle_ip(local *net.TCPConn, ip, port []byte) {
 	}
 	dest_port:=int(binary.BigEndian.Uint16(port))
 	if util.Config.Connection_log{
-		util.Logger.Printf("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_ip.String()+":"+strconv.Itoa(dest_port))
+		util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_ip.String()+":"+strconv.Itoa(dest_port))
 	}
 	is_cn := false
 	var err error

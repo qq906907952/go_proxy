@@ -21,7 +21,7 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 		})
 
 		if err != nil {
-			util.Logger.Println(fmt.Sprintf("can not connect to %s:%s",ip.String(),err.Error()))
+			util.Print_log(fmt.Sprintf("can not connect to %s:%s",ip.String(),err.Error()))
 			return
 		}
 		remote.SetKeepAlive(true)
@@ -32,7 +32,7 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 		remote, err = util.Connect_to_server(crypt, util.Tcp_conn,dest_port, ip.IP)
 
 		if err != nil {
-			util.Logger.Println("can not connect to server : " + err.Error())
+			util.Print_log("can not connect to server : " + err.Error())
 			return
 		}
 

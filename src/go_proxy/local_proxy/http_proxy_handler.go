@@ -19,14 +19,14 @@ func Handle_HTTP(local *net.TCPConn, host string, dest_port int, data []byte) {
 		is_cn, err := util.Is_china_domain(url)
 
 		if err != nil {
-			util.Logger.Println("cn domain decision error:"+err.Error())
+			util.Print_log("cn domain decision error:"+err.Error())
 			return
 		}
 
 		if is_cn {
 			ip, err := net.ResolveIPAddr("ip", url)
 			if err != nil {
-				util.Logger.Println("can not reslove domain " + url + " " + err.Error())
+				util.Print_log("can not reslove domain " + url + " " + err.Error())
 				return
 			}
 			handle_connection(local, ip, dest_port, data, nil, is_cn)
@@ -36,7 +36,7 @@ func Handle_HTTP(local *net.TCPConn, host string, dest_port int, data []byte) {
 			dest_ip, err := util.Parse_not_cn_domain(url, crypt)
 
 			if err != nil {
-				util.Logger.Println("can not reslove domain:" + url + " " + err.Error())
+				util.Print_log("can not reslove domain:" + url + " " + err.Error())
 				return
 			}
 
@@ -97,14 +97,14 @@ func Handle_HTTPS(local *net.TCPConn, host string) {
 		is_cn, err := util.Is_china_domain(url)
 
 		if err != nil {
-			util.Logger.Println("cn domain decision error:"+err.Error())
+			util.Print_log("cn domain decision error:"+err.Error())
 			return
 		}
 
 		if is_cn {
 			ip, err := net.ResolveIPAddr("ip", url)
 			if err != nil {
-				util.Logger.Println("can not reslove domain " + url + " " + err.Error())
+				util.Print_log("can not reslove domain " + url + " " + err.Error())
 				return
 			}
 
@@ -115,7 +115,7 @@ func Handle_HTTPS(local *net.TCPConn, host string) {
 			dest_ip, err := util.Parse_not_cn_domain(url, crypt, )
 
 			if err != nil {
-				util.Logger.Println("can not reslove domain:" + url + " " + err.Error())
+				util.Print_log("can not reslove domain:" + url + " " + err.Error())
 				return
 			}
 

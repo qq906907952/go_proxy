@@ -35,7 +35,7 @@ func Start_UDPserver(port int, crypt util.Crypt_interface) {
 	}
 	defer listen.Close()
 
-	util.Logger.Println("UDP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
+	util.Print_log("UDP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
 	fmt.Println("UDP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
 
 	for {
@@ -44,7 +44,7 @@ func Start_UDPserver(port int, crypt util.Crypt_interface) {
 		i, addr, err := listen.ReadFromUDP(recv_data)
 
 		if err != nil {
-			util.Logger.Println("udp recv err:" + err.Error())
+			util.Print_log("udp recv err:" + err.Error())
 			continue
 		}
 
@@ -60,18 +60,18 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	dec_data, err := crypt.Decrypt(data)
 
 	if err != nil {
-		util.Logger.Println("udp:can not decrypt data from " + udp_addr.String() + " : " + err.Error())
+		util.Print_log("udp:can not decrypt data from " + udp_addr.String() + " : " + err.Error())
 		return
 	}
 	dest_addr_len := dec_data[0]
 
 	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+14 {
-		util.Logger.Println("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
+		util.Print_log("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
 		return
 	}
 	origin_addr_len := dec_data[int(dest_addr_len)+1]
 	if origin_addr_len < 6 || len(dec_data) < int(origin_addr_len+dest_addr_len)+2 {
-		util.Logger.Println("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
+		util.Print_log("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
 		return
 	}
 
@@ -86,7 +86,7 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		go func(){
 			domain:=util.Get_domain_name_from_request(real_data)
 			if domain!=""{
-				util.Logger.Printf("connection log:%s query domain name %s" ,udp_addr.String(), domain)
+				util.Print_log("connection log:%s query domain name %s" ,udp_addr.String(), domain)
 			}
 		}()
 	}
@@ -117,7 +117,7 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	if !ok {
 		con, err := net.ListenUDP("udp", nil)
 		if err != nil {
-			util.Logger.Println("dial udp error:" + err.Error())
+			util.Print_log("dial udp error:" + err.Error())
 			return
 		}
 
@@ -149,7 +149,7 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		for {
 
 			if err := route.socket.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout) * time.Second)); err != nil {
-				util.Logger.Println("set udp read deadline error" + err.Error())
+				util.Print_log("set udp read deadline error" + err.Error())
 				return
 			}
 
