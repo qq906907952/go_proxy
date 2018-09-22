@@ -367,10 +367,10 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		port := make([]byte, 2)
 		binary.BigEndian.PutUint16(port, uint16(Dns_address.Port))
 
-		//dns_addr := Dns_address.IP.To4()
-		//if dns_addr == nil {
-		//	dns_addr = Dns_address.IP.To16()
-		//}
+		local_addr:=con.LocalAddr().(*net.UDPAddr)
+		local_port:=[]byte{0,0}
+		binary.BigEndian.PutUint16(local_port,uint16(local_addr.Port))
+		_b:=bytes.Join([][]byte{local_port,local_addr.IP},nil)
 
 		dest_addr := bytes.Join([][]byte{port, Dns_address.IP}, nil)
 		dns := &DNSStruct{}
@@ -379,7 +379,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
 
-			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, []byte{6,0,0,0,0,0,0}, request}, nil)))
+			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, []byte{byte(len(_b))},_b, request}, nil)))
 			data := make([]byte, Udp_recv_buff)
 
 

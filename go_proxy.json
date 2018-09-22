@@ -4,14 +4,14 @@
     "Ipv6":false,
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
-    "Local_port": 19191,
+    "Local_port": 3939,
     "Server_addr": "0.0.0.0",
     "Server_port": 3939,
     "Enc_method": "chacha20",
     "Password": " miku chang wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
-    "Dns_req_proto": "tcp"
+    "Dns_req_proto": "udp"
   },
 
   "Server": {
