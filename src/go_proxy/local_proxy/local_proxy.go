@@ -1,16 +1,16 @@
 package local_proxy
 
 import (
-	"net"
-	"strconv"
-	"strings"
-	"go_proxy/util"
 	"bufio"
 	"bytes"
-	"log"
 	"fmt"
+	"go_proxy/util"
 	"io"
+	"log"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,20 +32,23 @@ func Start_local_proxy_client() {
 	}
 
 	fmt.Println("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
-	util.Logger.Println("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
+	util.Print_log("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
 
 	for {
 		local, err := lcoal_listen.AcceptTCP()
 		if err != nil {
-			util.Logger.Println("tcp accept error " + err.Error())
+			util.Print_log("tcp accept error " + err.Error())
 			continue
 		}
-		local.SetKeepAlive(true)
-		local.SetKeepAlivePeriod(10 * time.Second)
-		go func() {
+
+		go func(local *net.TCPConn) {
 
 			defer local.Close()
 			defer util.Handle_panic()
+
+			local.SetKeepAlive(true)
+			local.SetKeepAlivePeriod(10 * time.Second)
+
 			recv := make([]byte, 1)
 			_, err = io.ReadFull(local, recv)
 
@@ -66,7 +69,7 @@ func Start_local_proxy_client() {
 
 				Handle_http_proxy(local, bytes.Join([][]byte{recv, b, o}, nil))
 			}
-		}()
+		}(local)
 
 	}
 }
@@ -76,15 +79,21 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
 	if err != nil {
+		util.Print_log("read http header error:" + err.Error())
 		return
+	}
+
+	host := req.Host
+	if util.Config.Connection_log {
+		util.Print_log("connection log:%s connect to %s", local.RemoteAddr().String(), host)
 	}
 
 	if strings.ToUpper(req.Method) == "CONNECT" {
 
-		Handle_HTTPS(local, req.Host)
+		Handle_HTTPS(local, host)
 
 	} else {
-		host := req.Host
+
 		var dest_port int
 		var url string
 		var err error
@@ -106,7 +115,7 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 		}
 
 		recv, err := convert_to_close(req)
-		if err!=nil{
+		if err != nil {
 			return
 		}
 		Handle_HTTP(local, url, dest_port, recv)

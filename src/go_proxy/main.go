@@ -14,15 +14,13 @@ func main() {
 		Max: util.Config.Ulimit,
 	})
 
+
 	//if util.Config.Client.Turn {
 	//
-	//	util.Group.Add(1)
+	//	util.Group.Add(2)
 	//	go go_client.Start_TCPclient()
+	//	go go_client.Start_UDPclien()
 	//
-	//	if util.Config.Udp_relay {
-	//		util.Group.Add(1)
-	//		go go_client.Start_UDPclien()
-	//	}
 	//}
 
 	if util.Config.Client.Local_proxy {
@@ -34,15 +32,10 @@ func main() {
 	if util.Config.Server.Turn {
 
 		for _, port := range util.Config.Server.Port {
-
-			util.Group.Add(1)
+			util.Group.Add(2)
 			go go_server.Start_TCPserver(port.Listen_port, util.Get_crypt(port.Enc_method, port.Password))
+			go go_server.Start_UDPserver(port.Listen_port, util.Get_crypt(port.Enc_method, port.Password))
 
-			if util.Config.Udp_relay {
-
-				util.Group.Add(1)
-				go go_server.Start_UDPserver(port.Listen_port, util.Get_crypt(port.Enc_method, port.Password))
-			}
 		}
 
 	}

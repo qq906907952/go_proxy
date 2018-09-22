@@ -3,39 +3,34 @@ package util
 import (
 	"log"
 	"os"
-	"time"
 	"runtime/debug"
 	"fmt"
+	"time"
 )
 
-var Logger log.Logger
 
-func init() {
-	_, err := os.Stat("log/")
-	if err != nil {
-		err := os.Mkdir("log", 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
+var Log = log.Logger{}
+
+
+func Print_log(log string,v... interface{}){
+
+	file, err := os.OpenFile("go_proxy.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	if err!=nil{
+		fmt.Println("can not open log file:"+err.Error())
+		fmt.Println("==============================")
+		return
 	}
-
-	file, err := os.OpenFile("log/go_proxy.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	Logger.SetOutput(file)
-	Logger.SetPrefix(time.Now().String() + "	")
+	Log.SetOutput(file)
+	Log.Printf(time.Now().Format(time.RFC3339)+"	"+log,v...)
 }
-
 
 
 func Handle_panic() {
 	err := recover()
 
 	if err != nil {
-		Logger.Print("panic : ")
-		Logger.Println(err)
+		Log.Print("panic : ")
+		Log.Println(err)
 
 		debug.PrintStack()
 		fmt.Println("==============================")

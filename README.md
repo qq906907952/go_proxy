@@ -13,8 +13,7 @@ git clone https://github.com/qq906907952/go_proxy.git
 -------
     {
 
-    "Udp_relay":true,                    //udp中继，必须打开
-
+    "Udp_timeout":60,                    //udp超时时间
     "Ulimit":1024000,                    //linux最大打开文件数(最大打开连接数)，取值范围0-1048576
 
     }

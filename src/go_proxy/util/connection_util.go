@@ -1,16 +1,16 @@
 package util
 
 import (
-	"net"
-	"encoding/binary"
 	"bytes"
-	"strings"
+	"encoding/binary"
 	"errors"
-	"strconv"
-	"math"
-	"io"
-	"time"
 	"fmt"
+	"io"
+	"math"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 )
 
 var china_ipv4 = map[int]int{}
@@ -55,39 +55,7 @@ func Ipv4str2int(ip string) (int, error) {
 }
 
 func Is_china_ipv4_addr(ip string) (bool, error) {
-	//china_ipv4_list, err := os.Open("china_ipv4")
-	//if err != nil {
-	//	return false, err
-	//}
-	//
-	//reader := bufio.NewReader(china_ipv4_list)
-	//for {
-	//	line, _, err := reader.ReadLine()
-	//	if err != nil {
-	//		if err == io.EOF {
-	//			return false, nil
-	//		} else {
-	//			return false, err
-	//		}
-	//	}
-	//	if len(line) == 0 {
-	//		continue
-	//	}
-	//	ip_mask := strings.Split(string(line), "/")
-	//	ipint, err := Ipv4str2int(ip_mask[0])
-	//	if err != nil {
-	//		return false, err
-	//	}
-	//	dest_ipint, err := Ipv4str2int(ip)
-	//	if err != nil {
-	//
-	//		return false, err
-	//	}
-	//	mask, err := strconv.Atoi(ip_mask[1])
-	//	if err != nil {
-	//
-	//		return false, err
-	//	}
+
 
 	dest_ipint, err := Ipv4str2int(ip)
 	if err != nil {
@@ -103,10 +71,6 @@ func Is_china_ipv4_addr(ip string) (bool, error) {
 
 	return false, nil
 
-	//	if dest_ipint&(int((math.Pow(2, float64(mask)))-1)<<uint(32-mask)) == ipint {
-	//		return true, nil
-	//	}
-	//}
 
 }
 
@@ -166,7 +130,7 @@ func Read_at_least_byte(con *net.TCPConn, b []byte) ([]byte, []byte, error) {
 		if i > 0 {
 			recv = bytes.Join([][]byte{recv, temp[:i]}, nil)
 			if ii := bytes.Index(recv, b); ii != -1 {
-				return recv[:ii], recv[ii:], nil
+				return recv[:ii+len(b)], recv[ii+len(b):], nil
 			}
 			continue
 		}
@@ -181,6 +145,8 @@ func Read_at_least_byte(con *net.TCPConn, b []byte) ([]byte, []byte, error) {
 func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 	//con1 read raw ,enc and write to con2
 	//con2 read enc data ,dec and write to con1
+
+
 
 	go func() {
 		defer Handle_panic()
@@ -198,7 +164,6 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 			}
 
 			if err != nil {
-
 				return
 			}
 		}
@@ -219,3 +184,4 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 	}
 
 }
+
