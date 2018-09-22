@@ -4,7 +4,7 @@
     "Local_proxy":true,
     "Local_addr":"0.0.0.0",
     "Local_port": 3939,
-    "Server_addr": "0.0.0.0",
+    "Server_addr": "47.75.216.83",
     "Server_port": 3939,
     "Enc_method": "chacha20",
 
@@ -28,7 +28,7 @@
   },
 
   "Ulimit":1024000,
-  "Connection_log":true,
+  "Connection_log":false,
   "Udp_timeout":30
 
 }

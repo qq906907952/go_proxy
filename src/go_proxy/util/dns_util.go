@@ -376,7 +376,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		local_addr:=con.LocalAddr().(*net.UDPAddr)
 		local_port:=[]byte{0,0}
 		binary.BigEndian.PutUint16(local_port,uint16(local_addr.Port))
-		_b:=bytes.Join([][]byte{local_addr.IP,local_port},nil)
+		_b:=bytes.Join([][]byte{local_port,local_addr.IP},nil)
 
 		var forward_dns_request = func(qtype uint16) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
