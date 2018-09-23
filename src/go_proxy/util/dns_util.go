@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"strings"
 	"net"
-	"strconv"
 	"errors"
 	"fmt"
 	"bufio"
@@ -149,10 +148,6 @@ func (this *DNSStruct) Marshal_request() []byte {
 //
 //}
 
-
-
-
-
 func Get_record_from_answer(answer []byte, answer_type uint16) ([]byte, error) {
 	if len(answer) < 12 {
 		return nil, errors.New("can not found record")
@@ -214,34 +209,33 @@ func Get_record_from_answer(answer []byte, answer_type uint16) ([]byte, error) {
 
 }
 
-
-func Get_domain_name_from_request(request []byte)string{
+func Get_domain_name_from_request(request []byte) string {
 	defer Handle_panic()
 
-	if len(request)<14{
+	if len(request) < 14 {
 		return ""
 	}
-	req:=request[12:]
+	req := request[12:]
 
-	for i,v:=range req{
-		if v==0{
-			name:=req[:i]
-			if len(name)<2{
+	for i, v := range req {
+		if v == 0 {
+			name := req[:i]
+			if len(name) < 2 {
 				return ""
 			}
 
-			domain:=""
-			for{
-				i:=int(name[0])
+			domain := ""
+			for {
+				i := int(name[0])
 
-				if len(name)-1<i{
+				if len(name)-1 < i {
 					return ""
 				}
-				domain+=string(name[1:i+1])+"."
-				name=name[i+1:]
-				if len(name)<=1{
-					if len(domain)>0{
-						domain=domain[:len(domain)-1]
+				domain += string(name[1:i+1]) + "."
+				name = name[i+1:]
+				if len(name) <= 1 {
+					if len(domain) > 0 {
+						domain = domain[:len(domain)-1]
 					}
 					return domain
 				}
@@ -251,20 +245,15 @@ func Get_domain_name_from_request(request []byte)string{
 	}
 	return ""
 
-
-
 }
 
-
-
 func Is_domain(url string) bool {
-	_sufix := strings.Split(url, ".")
-
-	if _, serr := strconv.Atoi(_sufix[len(_sufix)-1]); serr != nil {
+	if net.ParseIP(url) == nil {
 		return true
 	} else {
 		return false
 	}
+
 }
 
 func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
@@ -298,30 +287,29 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 				return nil, err
 			}
 
-			for{
-				if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
+			for {
+				if err := con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout) * time.Second)); err != nil {
 					Print_log("set tcp read deadline error" + err.Error())
-					return nil,err
+					return nil, err
 				}
 				answer, err := crypt.Read(con)
-				if answer!=nil && len(answer) > len(request){
-					if bytes.Equal(request[:2],answer[:2]){
+				if answer != nil && len(answer) > len(request) {
+					if bytes.Equal(request[:2], answer[:2]) {
 						ip, err = Get_record_from_answer(answer[len(request):], AAAA_record)
 						if err == nil {
 							return ip, nil
-						}else{
+						} else {
 							break
 						}
-					}else{
+					} else {
 						continue
 					}
 				}
-				if err!=nil{
-					return nil,err
+				if err != nil {
+					return nil, err
 				}
 
 			}
-
 
 		}
 
@@ -331,31 +319,29 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 			return nil, err
 		}
 
-		for{
-			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
+		for {
+			if err := con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout) * time.Second)); err != nil {
 				Print_log("set tcp read deadline error" + err.Error())
-				return nil,err
+				return nil, err
 			}
 			answer, err := crypt.Read(con)
-			if answer!=nil && len(answer) > len(request){
-				if bytes.Equal(request[:2],answer[:2]){
+			if answer != nil && len(answer) > len(request) {
+				if bytes.Equal(request[:2], answer[:2]) {
 					ip, err = Get_record_from_answer(answer[len(request):], A_record)
 					if err == nil {
 						return ip, nil
-					}else{
-						return nil,errors.New("no record found")
+					} else {
+						return nil, errors.New("no record found")
 					}
-				}else{
+				} else {
 					continue
 				}
 			}
-			if err!=nil{
-				return nil,err
+			if err != nil {
+				return nil, err
 			}
 
 		}
-
-
 
 	case "udp":
 		con, err := net.Dial("udp", fmt.Sprintf("%s:%d", Config.Client.Server_addr, Config.Client.Server_port))
@@ -364,39 +350,53 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		}
 		defer con.Close()
 
-		port := make([]byte, 2)
-		binary.BigEndian.PutUint16(port, uint16(Dns_address.Port))
-
-		//dns_addr := Dns_address.IP.To4()
-		//if dns_addr == nil {
-		//	dns_addr = Dns_address.IP.To16()
-		//}
-
-		dest_addr := bytes.Join([][]byte{port, Dns_address.IP}, nil)
+		local_addr := con.LocalAddr().(*net.UDPAddr)
+		dns_port := make([]byte, 2)
+		local_port := make([]byte, 2)
+		binary.BigEndian.PutUint16(dns_port, uint16(Dns_address.Port))
+		binary.BigEndian.PutUint16(local_port, uint16(local_addr.Port))
+		dns_ip := Dns_address.IP.To4()
+		if dns_ip == nil {
+			dns_ip = Dns_address.IP.To16()
+		}
+		local_ip := local_addr.IP.To4()
+		if local_ip == nil {
+			local_ip = local_addr.IP.To16()
+		}
+		dest_addr := bytes.Join([][]byte{dns_port, dns_ip}, nil)
+		_local_addr := bytes.Join([][]byte{local_port, local_ip}, nil)
 		dns := &DNSStruct{}
 
 		var forward_dns_request = func(qtype uint16) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
 
-			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr, []byte{6,0,0,0,0,0,0}, request}, nil)))
+			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr,
+				{byte(len(_local_addr))}, _local_addr, request}, nil)))
+
 			data := make([]byte, Udp_recv_buff)
 
-
-			for{
-				if err:=con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout)*time.Second));err!=nil{
+			for {
+				if err := con.SetReadDeadline(time.Now().Add(time.Duration(Config.Udp_timeout) * time.Second)); err != nil {
 					Print_log("set udp read deadline error" + err.Error())
-					return nil,err
+					return nil, err
 				}
 				i, err := con.Read(data)
 
-				if i>0{
-					answer, err := crypt.Decrypt(data[:i])
+				if i > 0 {
+					dec_data, err := crypt.Decrypt(data[:i])
 					if err != nil {
-						return nil, err
+						Print_log("decrypt err:" + err.Error())
+						continue
 					}
 
-					if len(answer) > len(request) && bytes.Equal(request[:2],answer[:2]){
+					dest_len := dec_data[0]
+					if dest_len < 6 || len(dec_data) < int(dest_len)+2 {
+						Print_log("recv udp len error")
+						continue
+					}
+					answer := dec_data[dest_len+1:]
+					if len(answer) > len(request) && bytes.Equal(request[:2], answer[:2]) {
 						return Get_record_from_answer(answer[len(request):], qtype)
 					}
 				}

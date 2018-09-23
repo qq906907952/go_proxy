@@ -9,6 +9,7 @@ import (
 	"crypto/aes"
 	"golang.org/x/crypto/chacha20poly1305"
 	"log"
+	"github.com/pkg/errors"
 )
 
 var Crypt Crypt_interface
@@ -43,7 +44,9 @@ func (cha *Chacha20) Encrypt(data []byte) []byte {
 }
 
 func (cha *Chacha20) Decrypt(data []byte) (dst []byte, err error) {
-
+	if len(data)<12{
+		return nil,errors.New("data len error")
+	}
 	dst, err = cha.Aead.Open(nil, data[:12], data[12:], []byte("0_~ ka wa ii miku ~_0"))
 
 	return
@@ -82,7 +85,9 @@ func (aes256 *Aes256cfb) Encrypt(data []byte) ([]byte) {
 }
 
 func (aes256 *Aes256cfb) Decrypt(data []byte) ([]byte, error) {
-
+	if len(data)<aes.BlockSize{
+		return nil,errors.New("data len error")
+	}
 	iv := data[:aes.BlockSize]
 	decrypt := cipher.NewCFBDecrypter(aes256.Block, iv)
 	dec_data := make([]byte, len(data)-aes.BlockSize)

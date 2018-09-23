@@ -127,8 +127,10 @@ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
 编辑/etc/dnsmasq.conf：
 
-    取消no-resolv注释
-
+    取消no-resolv 和 bind-interfaces 注释
+    
+    取消listen-address注释 并修改为 listen-address=127.0.0.1,192.168.1.1    //192.168.1.1 为br0网关地址
+    
     在最后添加
 
     server=127.0.0.1#9999      //上游dns地址 9999修改为客户端监听的端口

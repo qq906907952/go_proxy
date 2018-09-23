@@ -9,6 +9,7 @@ import (
 	"log"
 	"sync"
 	"time"
+	"bytes"
 )
 
 type udp_route struct {
@@ -65,7 +66,7 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	}
 	dest_addr_len := dec_data[0]
 
-	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+14 {
+	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+15 {
 		util.Print_log("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
 		return
 	}
@@ -107,8 +108,6 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		ok    bool
 	)
 
-
-
 	lock.RLock()
 	route, ok = route_map[origin_addr.String()+":"+udp_addr.IP.String()]
 	lock.RUnlock()
@@ -145,18 +144,31 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 
 	route.socket.WriteTo(real_data, dest_addr)
 	if !ok{
-		recv := make([]byte, util.Udp_recv_buff)
+
 		for {
 
 			if err := route.socket.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout) * time.Second)); err != nil {
 				util.Print_log("set udp read deadline error" + err.Error())
 				return
 			}
-
-			i, err := route.socket.Read(recv)
-
+			recv := make([]byte, util.Udp_recv_buff)
+			i,_from_addr, err := route.socket.ReadFrom(recv)
 			if i > 0 {
-				server.WriteToUDP(crypt.Encrypt(recv[:i]), route.send_to)
+				from_addr:=_from_addr.(*net.UDPAddr)
+
+
+					from_port:=make([]byte,2)
+					binary.BigEndian.PutUint16(from_port,uint16(from_addr.Port))
+					b:=[]byte{}
+					if from_addr.IP.To4()!=nil{
+						b=bytes.Join([][]byte{from_port,from_addr.IP.To4()},nil)
+
+					}else{
+						b=bytes.Join([][]byte{from_port,from_addr.IP.To16()},nil)
+					}
+
+					server.WriteToUDP(crypt.Encrypt(bytes.Join([][]byte{{byte(len(b))},b,recv[:i]},nil)), route.send_to)
+
 			}
 
 			if err != nil {
