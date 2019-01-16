@@ -43,9 +43,14 @@ func Start_TCPclient() {
 
 func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
-	defer util.Handle_panic()
 
-	defer con.Close()
+
+	defer func() {
+		util.Handle_panic()
+		util.Close_tcp(con)
+
+	}()
+
 	con.SetKeepAlive(true)
 	con.SetKeepAlivePeriod(10*time.Second)
 	addr, err := util.Get_tcp_origin_dest(con)
@@ -72,7 +77,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 		util.Print_log("connection to remote error:"+err.Error())
 		return
 	}
-	defer remote.Close()
+	defer util.Close_tcp(remote)
 
 	util.Connection_loop(con, remote, crypt)
 

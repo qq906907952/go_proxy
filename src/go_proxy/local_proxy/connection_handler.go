@@ -38,7 +38,7 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 
 	}
 
-	defer remote.Close()
+	defer util.Close_tcp(remote)
 
 	if prefix_data != nil {
 		if is_cn {
@@ -64,8 +64,8 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 	if is_cn {
 
 		go func() {
-			defer local.Close()
-			defer remote.Close()
+			defer util.Close_tcp(local)
+			defer util.Close_tcp(remote)
 			io.Copy(local, remote)
 		}()
 

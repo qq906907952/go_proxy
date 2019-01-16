@@ -43,8 +43,8 @@ func Start_local_proxy_client() {
 
 		go func(local *net.TCPConn) {
 
-			defer local.Close()
 			defer util.Handle_panic()
+			defer util.Close_tcp(local)
 
 			local.SetKeepAlive(true)
 			local.SetKeepAlivePeriod(10 * time.Second)

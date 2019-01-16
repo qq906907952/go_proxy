@@ -276,7 +276,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		defer con.Close()
+		defer Close_tcp(con)
 
 		dns := &DNSStruct{}
 

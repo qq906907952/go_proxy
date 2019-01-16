@@ -9,7 +9,7 @@ import (
 	"crypto/aes"
 	"golang.org/x/crypto/chacha20poly1305"
 	"log"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 var Crypt Crypt_interface

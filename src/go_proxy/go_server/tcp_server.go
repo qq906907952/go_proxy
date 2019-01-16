@@ -41,7 +41,7 @@ func Start_TCPserver(port int, crypt util.Crypt_interface) {
 func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 	var err error
 	defer util.Handle_panic()
-	defer con.Close()
+	defer util.Close_tcp(con)
 	con.SetKeepAlive(true)
 	con.SetKeepAlivePeriod(10*time.Second)
 
@@ -67,7 +67,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 		go func() {
 			defer ns.Close()
-			defer con.Close()
+			defer util.Close_tcp(con)
 			answer := make([]byte, util.Udp_recv_buff)
 			for {
 				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
@@ -98,7 +98,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			if dest.Port==53 && util.Config.Connection_log {
 				go func(){
 					domain:=util.Get_domain_name_from_request(dec_data)
-					if domain!=""{
+					if domain!="" && util.Config.Connection_log{
 						util.Print_log("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
 					}
 				}()
@@ -117,7 +117,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			util.Print_log("tcp can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
-		defer target.Close()
+		defer util.Close_tcp(target)
 		target.SetKeepAlive(true)
 		target.SetKeepAlivePeriod(10*time.Second)
 		util.Connection_loop(target, con, crypt)

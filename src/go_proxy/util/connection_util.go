@@ -12,6 +12,7 @@ import (
 	"time"
 	"fmt"
 	"syscall"
+	"context"
 )
 
 var china_ipv4 = map[int]int{}
@@ -57,7 +58,6 @@ func Ipv4str2int(ip string) (int, error) {
 
 func Is_china_ipv4_addr(ip string) (bool, error) {
 
-
 	dest_ipint, err := Ipv4str2int(ip)
 	if err != nil {
 		return false, err
@@ -72,7 +72,6 @@ func Is_china_ipv4_addr(ip string) (bool, error) {
 
 	return false, nil
 
-
 }
 
 func Connect_to_server(crypt Crypt_interface, request_type, dest_port int, ip net.IP) (*net.TCPConn, error) {
@@ -84,7 +83,7 @@ func Connect_to_server(crypt Crypt_interface, request_type, dest_port int, ip ne
 	}
 	remote := con.(*net.TCPConn)
 	remote.SetKeepAlive(true)
-	remote.SetKeepAlivePeriod(10*time.Second)
+	remote.SetKeepAlivePeriod(10 * time.Second)
 	timestamp_bytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp_bytes, uint64(time.Now().Unix()))
 
@@ -142,26 +141,33 @@ func Read_at_least_byte(con *net.TCPConn, b []byte) ([]byte, []byte, error) {
 
 	}
 }
+func Close_tcp(conn *net.TCPConn){
+	conn.CloseRead()
+	conn.Close()
+}
 
 func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 	//con1 read raw ,enc and write to con2
 	//con2 read enc data ,dec and write to con1
 
+	c1 := make(chan []byte, 100)
+	c2 := make(chan []byte, 100)
+	ctx1, can1 := context.WithCancel(context.TODO())
+	ctx2, can2 := context.WithCancel(context.TODO())
 
 
 	go func() {
-		defer Handle_panic()
-		defer con1.Close()
-		defer con2.Close()
+		defer func() {
+			Handle_panic()
+			close(c1)
+			can1()
+		}()
 
 		for {
 			data := make([]byte, Tcp_recv_buff)
 			i, err := con1.Read(data)
 			if i > 0 {
-
-				if err := crypt.Write(con2, data[:i]); err != nil {
-					return
-				}
+				c1 <- data[:i]
 			}
 
 			if err != nil {
@@ -171,18 +177,45 @@ func Connection_loop(con1, con2 *net.TCPConn, crypt Crypt_interface) {
 
 	}()
 
-	for {
-		data, err := crypt.Read(con2)
-		if data != nil {
-			if _, err := con1.Write(data); err != nil {
+	go func() {
+		defer func() {
+			Handle_panic()
+			close(c2)
+			can2()
+		}()
+
+		for {
+			data, err := crypt.Read(con2)
+			if data != nil {
+				c2 <- data
+			}
+
+			if err != nil {
 				return
 			}
 		}
+	}()
 
-		if err != nil {
+	for {
+		select {
+		case data := <-c1:
+			crypt.Write(con2, data)
+
+		case data := <-c2:
+			con1.Write(data)
+
+		case <-ctx1.Done():
+			for v := range c1 {
+				crypt.Write(con2, v)
+			}
 			return
+		case <-ctx2.Done():
+			for v := range c2 {
+				con1.Write(v)
+			}
+			return
+
 		}
 	}
 
 }
-
