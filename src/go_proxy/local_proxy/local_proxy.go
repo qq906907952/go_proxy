@@ -14,12 +14,26 @@ import (
 	"time"
 )
 
-var crypt util.Crypt_interface
+var tcp_crypt, udp_crypt util.Crypt_interface
+
+func init() {
+	udp_crypt = util.Get_crypt(util.Config.Client.Enc_method, util.Config.Client.Password)
+	tcp_crypt = util.Get_crypt(util.Config.Client.Enc_method, util.Config.Client.Password)
+	if util.Config.Client.Tls.Turn && !util.Config.Client.Tls.Tcp_encrypt {
+		tcp_crypt = util.Get_none_crypt()
+	}
+
+}
 
 func Start_local_proxy_client() {
+
+
 	defer util.Group.Done()
 
-	crypt = util.Get_crypt(util.Config.Client.Enc_method, util.Config.Client.Password)
+	if !util.Config.Client.Tls.Turn && util.Config.Client.Enc_method == "none" {
+		log.Fatal("enc method must not none when tls disable")
+	}
+
 	lcoal_listen, err := net.ListenTCP("tcp", &net.TCPAddr{
 		IP:   net.ParseIP(util.Config.Client.Local_addr),
 		Port: util.Config.Client.Local_port,
@@ -31,8 +45,14 @@ func Start_local_proxy_client() {
 
 	}
 
-	fmt.Println("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
-	util.Print_log("local_proxy listen on " + util.Config.Client.Local_addr + ":" + strconv.Itoa(util.Config.Client.Local_port))
+	_l := fmt.Sprintf("local_proxy listen on %s:%d \r\ntcp crypt method:%v \r\nudp crypt method:%s",
+		util.Config.Client.Local_addr,
+		util.Config.Client.Local_port,
+		tcp_crypt.String(),
+		udp_crypt.String(),
+	)
+	fmt.Println(_l)
+	util.Print_log(_l)
 
 	for {
 		local, err := lcoal_listen.AcceptTCP()
@@ -79,13 +99,13 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(recv)))
 
 	if err != nil {
-		util.Print_log("read http header error:"+err.Error())
+		util.Print_log("read http header error:" + err.Error())
 		return
 	}
 
 	host := req.Host
-	if util.Config.Connection_log{
-		util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),host)
+	if util.Config.Connection_log {
+		util.Print_log("connection log:%s connect to %s", local.RemoteAddr().String(), host)
 	}
 
 	if strings.ToUpper(req.Method) == "CONNECT" {
@@ -115,7 +135,7 @@ func Handle_http_proxy(local *net.TCPConn, recv []byte) {
 		}
 
 		recv, err := convert_to_close(req)
-		if err!=nil{
+		if err != nil {
 			return
 		}
 		Handle_HTTP(local, url, dest_port, recv)

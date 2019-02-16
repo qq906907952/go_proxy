@@ -8,41 +8,49 @@ import (
 	"net"
 	"errors"
 	"fmt"
-	"bufio"
-	"os"
-	"io"
 	"sync"
 	"time"
 )
 
 var Dns_address *net.UDPAddr
-var domain_map *saft_map
-var ip_domain_map *saft_map
+var domain_map = new(sync.Map)
+var ip_domain_map *sync.Map
 
-type saft_map struct {
-	sync.RWMutex
-	_map map[string]interface{}
-}
-
-func (this *saft_map) read(key string) (interface{}, bool) {
-	this.RWMutex.RLock()
-	value, ok := this._map[key]
-	this.RWMutex.RUnlock()
-	return value, ok
-}
-
-func (this *saft_map) write(key string, value interface{}) {
-	this.RWMutex.Lock()
-	this._map[key] = value
-	this.RWMutex.Unlock()
-
+type domain_record struct {
+	Ip   []byte
+	Time int64
 }
 
 func init() {
-	domain_map = new(saft_map)
-	domain_map._map = make(map[string]interface{})
-	ip_domain_map = new(saft_map)
-	ip_domain_map._map = make(map[string]interface{})
+
+	if Config.Client.Local_proxy && Config.Client.Domain_cache_time > 0 {
+		const (
+			check_ip_domain_expire_interval = 2*60
+			number_of_ip_domain_pre_check   = 200
+		)
+
+		ip_domain_map = new(sync.Map)
+
+		go func() {
+
+			for {
+				time.Sleep(check_ip_domain_expire_interval * time.Second)
+				i := 0
+				ip_domain_map.Range(func(key, value interface{}) bool {
+					if i > number_of_ip_domain_pre_check {
+						return false
+					}
+					if time.Now().Unix()-value.(*domain_record).Time >= Config.Client.Domain_cache_time {
+						ip_domain_map.Delete(key)
+					}
+					i += 1
+					return true
+				})
+
+			}
+		}()
+	}
+
 }
 
 const (
@@ -256,34 +264,39 @@ func Is_domain(url string) bool {
 
 }
 
-func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
-
-	if ip, ok := ip_domain_map.read(domain); ok {
-		return ip.([]byte), nil
+func Parse_not_cn_domain(domain string, tcp_crypt, udp_crypt Crypt_interface) ([]byte, error) {
+	if Config.Client.Domain_cache_time > 0 {
+		if ip, ok := ip_domain_map.Load(domain); ok {
+			return ip.(*domain_record).Ip, nil
+		}
 	}
 
 	var ip []byte
+
 	defer func() {
-		if len(ip) != 0 {
+		if Config.Client.Domain_cache_time > 0 && len(ip) != 0 {
 			go func() {
-				ip_domain_map.write(domain, ip)
+				ip_domain_map.Store(domain, &domain_record{
+					Ip:   ip,
+					Time: time.Now().Unix(),
+				})
 			}()
 		}
 	}()
 	switch Config.Client.Dns_req_proto {
 	case "tcp":
-		con, err := Connect_to_server(crypt, Udp_conn, Dns_address.Port, Dns_address.IP)
+		con, raw, err := Connect_to_server(tcp_crypt, Udp_conn, Dns_address.Port, Dns_address.IP)
 		if err != nil {
 			return nil, err
 		}
-		defer Close_tcp(con)
+		defer Close_tcp(raw)
 
 		dns := &DNSStruct{}
 
 		if Config.Client.Ipv6 {
 			dns.Fill_question(domain, AAAA_record)
 			request := dns.Marshal_request()
-			if err := crypt.Write(con, request); err != nil {
+			if err := tcp_crypt.Write(con, request); err != nil {
 				return nil, err
 			}
 
@@ -292,7 +305,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 					Print_log("set tcp read deadline error" + err.Error())
 					return nil, err
 				}
-				answer, err := crypt.Read(con)
+				answer, err := tcp_crypt.Read(con)
 				if answer != nil && len(answer) > len(request) {
 					if bytes.Equal(request[:2], answer[:2]) {
 						ip, err = Get_record_from_answer(answer[len(request):], AAAA_record)
@@ -315,7 +328,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 
 		dns.Fill_question(domain, A_record)
 		request := dns.Marshal_request()
-		if err := crypt.Write(con, request); err != nil {
+		if err := tcp_crypt.Write(con, request); err != nil {
 			return nil, err
 		}
 
@@ -324,7 +337,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 				Print_log("set tcp read deadline error" + err.Error())
 				return nil, err
 			}
-			answer, err := crypt.Read(con)
+			answer, err := tcp_crypt.Read(con)
 			if answer != nil && len(answer) > len(request) {
 				if bytes.Equal(request[:2], answer[:2]) {
 					ip, err = Get_record_from_answer(answer[len(request):], A_record)
@@ -374,9 +387,8 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 			dns.Fill_question(domain, qtype)
 			request := dns.Marshal_request()
 
-			con.Write(crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr,
+			con.Write(udp_crypt.Encrypt(bytes.Join([][]byte{{byte(len(dest_addr))}, dest_addr,
 				{byte(len(_local_addr))}, _local_addr, request}, nil)))
-
 
 			data := make([]byte, Udp_recv_buff)
 
@@ -388,7 +400,7 @@ func Parse_not_cn_domain(domain string, crypt Crypt_interface) ([]byte, error) {
 				i, err := con.Read(data)
 
 				if i > 0 {
-					dec_data, err := crypt.Decrypt(data[:i])
+					dec_data, err := udp_crypt.Decrypt(data[:i])
 					if err != nil {
 						Print_log("decrypt err:" + err.Error())
 						continue
@@ -437,56 +449,62 @@ func Is_china_domain(domain string) (bool, error) {
 		return false, errors.New("domain name illegal")
 	}
 
-	if is_cn, ok := domain_map.read(strings.Join(_domain[len(_domain)-2:], ".")); ok {
-		return is_cn.(bool), nil
-	}
-
 	if _domain[len(_domain)-1] == "cn" {
 		return true, nil
 	}
 
-	china_domain, err := os.Open("dnsmasq-china-list")
-	if err != nil {
-		return false, nil
+	if _, ok := domain_map.Load(strings.Join(_domain[len(_domain)-2:], ".")); ok {
+		return true, nil
 	}
-	defer china_domain.Close()
+	return false, nil
 
-	reader := bufio.NewReader(china_domain)
+	//if is_cn, ok := domain_map.Load(strings.Join(_domain[len(_domain)-2:], ".")); ok {
+	//	return is_cn.(bool), nil
+	//}
 
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			if err == io.EOF {
-
-				go func() {
-					domain_map.write(strings.Join(_domain[len(_domain)-2:], "."), false)
-				}()
-
-				return false, nil
-
-			} else {
-				return false, err
-			}
-		}
-		if len(line) == 0 {
-			continue
-		}
-		if line_spl := strings.Split(string(line), "/"); len(line_spl) < 2 {
-
-			continue
-
-		} else {
-
-			//if reg2.MatchString(domain) || reg.MatchString(domain) {
-			if strings.Join(_domain[len(_domain)-2:], ".") == line_spl[1] {
-				go func() {
-					domain_map.write(strings.Join(_domain[len(_domain)-2:], "."), true)
-
-				}()
-				return true, nil
-			}
-		}
-
-	}
+	//china_domain, err := os.Open("dnsmasq-china-list")
+	//if err != nil {
+	//	Print_log("warnnig : open dnsmasq-china-list file fail : "+ err.Error())
+	//	return false, nil
+	//}
+	//defer china_domain.Close()
+	//
+	//reader := bufio.NewReader(china_domain)
+	//
+	//for {
+	//	line, _, err := reader.ReadLine()
+	//	if err != nil {
+	//		if err == io.EOF {
+	//
+	//			go func() {
+	//				domain_map.Store(strings.Join(_domain[len(_domain)-2:], "."), false)
+	//			}()
+	//
+	//			return false, nil
+	//
+	//		} else {
+	//			return false, err
+	//		}
+	//	}
+	//	if len(line) == 0 {
+	//		continue
+	//	}
+	//	if line_spl := strings.Split(string(line), "/"); len(line_spl) < 2 {
+	//
+	//		continue
+	//
+	//	} else {
+	//
+	//		//if reg2.MatchString(domain) || reg.MatchString(domain) {
+	//		if strings.Join(_domain[len(_domain)-2:], ".") == line_spl[1] {
+	//			go func() {
+	//				domain_map.Store(strings.Join(_domain[len(_domain)-2:], "."), true)
+	//
+	//			}()
+	//			return true, nil
+	//		}
+	//	}
+	//
+	//}
 
 }

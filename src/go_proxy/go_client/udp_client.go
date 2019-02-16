@@ -4,7 +4,6 @@ import (
 	"net"
 	"log"
 	"syscall"
-
 	"bytes"
 	"go_proxy/util"
 	"encoding/binary"
@@ -16,6 +15,9 @@ const SO_REUSEPORT = 15
 
 func Start_UDPclien() {
 	defer util.Group.Done()
+
+	udp_crypt := util.Get_crypt(util.Config.Client.Enc_method, util.Config.Client.Password)
+
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
 		IP:   net.ParseIP(util.Config.Client.Local_addr),
 		Port: util.Config.Client.Local_port,
@@ -38,6 +40,15 @@ func Start_UDPclien() {
 	syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
 	syscall.SetsockoptInt(int(file.Fd()), syscall.SOL_SOCKET, SO_REUSEPORT, 1)
 
+	_l := fmt.Sprintf("udp client listen on %s:%d,remote server %s:%d \r\ncrypt method:%s",
+		util.Config.Client.Local_addr,
+		util.Config.Client.Local_port,
+		util.Config.Client.Server_addr,
+		util.Config.Client.Server_port,
+		udp_crypt.String())
+	util.Print_log(_l)
+	fmt.Println(_l)
+
 	for {
 		data := make([]byte, util.Udp_recv_buff)
 		//store the additional data include the dest addr
@@ -58,7 +69,7 @@ func Start_UDPclien() {
 			for _, msg := range msgs {
 				if msg.Header.Type == syscall.IP_RECVORIGDSTADDR {
 
-					handle_udp_data(listen, addr, data[:i], msg.Data[2:8], crypt)
+					handle_udp_data(listen, addr, data[:i], msg.Data[2:8], udp_crypt)
 					return
 				}
 			}
@@ -143,7 +154,7 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			dest_len := dec_data[0]
 			if dest_len != 6 || len(dec_data) < int(dest_len)+1 {
 				util.Print_log("recv udp len error")
-				 continue
+				continue
 			}
 
 			fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
@@ -155,7 +166,6 @@ func handle_udp_data(local *net.UDPConn, udp_addr *net.UDPAddr, data, dest []byt
 			for i, v := range udp_addr.IP.To4() {
 				sour_ip[i] = v
 			}
-
 
 			syscall.SetsockoptInt(fd, syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
 			syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, SO_REUSEPORT, 1)

@@ -10,6 +10,8 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 	"log"
 	"errors"
+	"fmt"
+
 )
 
 var Crypt Crypt_interface
@@ -19,14 +21,16 @@ type Crypt_interface interface {
 	Decrypt([]byte) ([]byte, error)
 
 	Get_passwd() ([]byte)
-	Write(*net.TCPConn, []byte) error
-	Read(*net.TCPConn) ([]byte, error)
+	Write(net.Conn, []byte) error
+	Read(net.Conn) ([]byte, error)
+	String() string
 }
 
 type Chacha20 struct {
 	Aead     cipher.AEAD
 	password []byte
 }
+
 
 func (cha *Chacha20) Get_passwd() []byte {
 	return cha.password
@@ -52,15 +56,17 @@ func (cha *Chacha20) Decrypt(data []byte) (dst []byte, err error) {
 	return
 }
 
-func (cha *Chacha20) Write(con *net.TCPConn, data []byte) error {
+func (cha *Chacha20) Write(con net.Conn, data []byte) error {
 	return write_data(con, data, cha)
 
 }
 
-func (cha *Chacha20) Read(con *net.TCPConn) ([]byte, error) {
+func (cha *Chacha20) Read(con net.Conn) ([]byte, error) {
 	return read_data(con, cha)
 }
-
+func (cha *Chacha20)String() string{
+	return "chacha20"
+}
 //==========================================
 
 type Aes256cfb struct {
@@ -95,20 +101,55 @@ func (aes256 *Aes256cfb) Decrypt(data []byte) ([]byte, error) {
 	return dec_data, nil
 }
 
-func (aes256 *Aes256cfb) Write(con *net.TCPConn, data []byte) error {
+func (aes256 *Aes256cfb) Write(con net.Conn, data []byte) error {
 	return write_data(con, data, aes256)
 
 }
 
-func (aes256 *Aes256cfb) Read(con *net.TCPConn) ([]byte, error) {
+func (aes256 *Aes256cfb) Read(con net.Conn) ([]byte, error) {
 	return read_data(con, aes256)
+}
+
+func (*Aes256cfb)String() string{
+	return "aes-256-cfb"
 }
 
 //===============================================================
 
-func Get_crypt(method, password string) Crypt_interface {
-	if method == "chacha20" {
+type None struct{
 
+}
+
+func (*None) Encrypt(b []byte) ([]byte) {
+	return b
+}
+
+func (*None) Decrypt(b []byte) ([]byte, error) {
+	return b ,nil
+}
+
+func (*None) Get_passwd() ([]byte) {
+	return []byte{}
+}
+
+func (n *None) Write(con net.Conn,b []byte) error {
+	return write_data(con, b, n)
+}
+
+func (n *None) Read(con net.Conn) ([]byte, error) {
+	return read_data(con,n)
+}
+func ( *None)String()string {
+	return "none"
+}
+//===============================================================
+func Get_none_crypt()Crypt_interface{
+	return &None{}
+}
+
+func Get_crypt(method, password string) Crypt_interface {
+	switch method{
+	case "chacha20":
 		aead, err := chacha20poly1305.New([]byte(password))
 		if err != nil {
 			log.Fatal(err)
@@ -118,7 +159,7 @@ func Get_crypt(method, password string) Crypt_interface {
 			password: []byte(password),
 		}
 
-	} else if method == "aes-256-cfb" {
+	case "aes-256-cfb":
 		block, err := aes.NewCipher([]byte(password))
 		if err != nil {
 			log.Fatal(err)
@@ -128,14 +169,17 @@ func Get_crypt(method, password string) Crypt_interface {
 			Block:    block,
 			password: []byte(password),
 		}
-	} else {
+
+
+
+	default:
 		log.Fatal("unsupport encrypt method")
 		return nil
 	}
 
 }
 
-func write_data(con *net.TCPConn, data []byte, crypt Crypt_interface) error {
+func write_data(con net.Conn, data []byte, crypt Crypt_interface) error {
 	data_len := make([]byte, 2)
 	enc_data := crypt.Encrypt(data)
 
@@ -147,7 +191,7 @@ func write_data(con *net.TCPConn, data []byte, crypt Crypt_interface) error {
 	return nil
 }
 
-func read_data(con *net.TCPConn, crypt Crypt_interface) ([]byte, error) {
+func read_data(con net.Conn, crypt Crypt_interface) ([]byte, error) {
 	data_len, err := Read_data_len(con)
 
 	if err != nil {
@@ -156,15 +200,15 @@ func read_data(con *net.TCPConn, crypt Crypt_interface) ([]byte, error) {
 	}
 	enc_data, err := Read_tcp_data(con, data_len)
 
-	if enc_data != nil {
+	if err!=nil{
+		return nil, errors.New(fmt.Sprintf("can not read full data : %s",err.Error()))
+	}else{
 		dec_data, err := crypt.Decrypt(enc_data)
 		if err!=nil{
 			Log.Println("decrypt err:"+err.Error())
 		}
 		return dec_data, err
-	} else {
-
-		return nil, err
 	}
+
 
 }

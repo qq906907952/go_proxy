@@ -2,7 +2,6 @@ package go_server
 
 import (
 	"net"
-	"strconv"
 	"go_proxy/util"
 	"encoding/binary"
 	"fmt"
@@ -36,8 +35,9 @@ func Start_UDPserver(port int, crypt util.Crypt_interface) {
 	}
 	defer listen.Close()
 
-	util.Print_log("UDP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
-	fmt.Println("UDP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
+	_l := fmt.Sprintf("UDP server listen on %s:%d  crypt method:%s", "0.0.0.0", port, crypt.String())
+	util.Print_log(_l)
+	fmt.Println(_l)
 
 	for {
 
@@ -67,27 +67,27 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	dest_addr_len := dec_data[0]
 
 	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+15 {
-		util.Print_log("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
+		util.Print_log("udp:recv data len error from " + udp_addr.String())
 		return
 	}
 	origin_addr_len := dec_data[int(dest_addr_len)+1]
-	if origin_addr_len < 6 || len(dec_data) < int(origin_addr_len+dest_addr_len)+2 {
-		util.Print_log("udp:recv data len error from " + udp_addr.String() + " : " + err.Error())
+	if origin_addr_len < 6 || len(dec_data) < int(origin_addr_len)+int(dest_addr_len)+2 {
+		util.Print_log("udp:recv data len error from " + udp_addr.String() )
 		return
 	}
 
 	dest_port := binary.BigEndian.Uint16(dec_data[1:3])
-	dest_ip := dec_data[3 : dest_addr_len+1]
-	origin_port := binary.BigEndian.Uint16(dec_data[dest_addr_len+2 : dest_addr_len+4])
-	origin_ip := dec_data[dest_addr_len+4 : dest_addr_len+4+origin_addr_len-2]
+	dest_ip := dec_data[3: dest_addr_len+1]
+	origin_port := binary.BigEndian.Uint16(dec_data[dest_addr_len+2: dest_addr_len+4])
+	origin_ip := dec_data[dest_addr_len+4: dest_addr_len+4+origin_addr_len-2]
 
 	real_data := dec_data[dest_addr_len+origin_addr_len+2:]
 
-	if dest_port == 53 && util.Config.Connection_log{
-		go func(){
-			domain:=util.Get_domain_name_from_request(real_data)
-			if domain!=""{
-				util.Print_log("connection log:%s query domain name %s" ,udp_addr.String(), domain)
+	if dest_port == 53 && util.Config.Connection_log {
+		go func() {
+			domain := util.Get_domain_name_from_request(real_data)
+			if domain != "" {
+				util.Print_log("connection log:%s query domain name %s", udp_addr.String(), domain)
 			}
 		}()
 	}
@@ -112,7 +112,6 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 	route, ok = route_map[origin_addr.String()+":"+udp_addr.IP.String()]
 	lock.RUnlock()
 
-
 	if !ok {
 		con, err := net.ListenUDP("udp", nil)
 		if err != nil {
@@ -125,14 +124,12 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 			send_to: udp_addr,
 		}
 
-
-
 		lock.Lock()
 		route_map[origin_addr.String()+":"+udp_addr.IP.String()] = route
 		lock.Unlock()
-		defer func(){
+		defer func() {
 			lock.Lock()
-			delete(route_map,origin_addr.String()+":"+udp_addr.IP.String())
+			delete(route_map, origin_addr.String()+":"+udp_addr.IP.String())
 			lock.Unlock()
 			con.Close()
 		}()
@@ -141,9 +138,8 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		route.send_to = udp_addr
 	}
 
-
 	route.socket.WriteTo(real_data, dest_addr)
-	if !ok{
+	if !ok {
 
 		for {
 
@@ -152,22 +148,21 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 				return
 			}
 			recv := make([]byte, util.Udp_recv_buff)
-			i,_from_addr, err := route.socket.ReadFrom(recv)
+			i, _from_addr, err := route.socket.ReadFrom(recv)
 			if i > 0 {
-				from_addr:=_from_addr.(*net.UDPAddr)
+				from_addr := _from_addr.(*net.UDPAddr)
 
+				from_port := make([]byte, 2)
+				binary.BigEndian.PutUint16(from_port, uint16(from_addr.Port))
+				b := []byte{}
+				if from_addr.IP.To4() != nil {
+					b = bytes.Join([][]byte{from_port, from_addr.IP.To4()}, nil)
 
-					from_port:=make([]byte,2)
-					binary.BigEndian.PutUint16(from_port,uint16(from_addr.Port))
-					b:=[]byte{}
-					if from_addr.IP.To4()!=nil{
-						b=bytes.Join([][]byte{from_port,from_addr.IP.To4()},nil)
+				} else {
+					b = bytes.Join([][]byte{from_port, from_addr.IP.To16()}, nil)
+				}
 
-					}else{
-						b=bytes.Join([][]byte{from_port,from_addr.IP.To16()},nil)
-					}
-
-					server.WriteToUDP(crypt.Encrypt(bytes.Join([][]byte{{byte(len(b))},b,recv[:i]},nil)), route.send_to)
+				server.WriteToUDP(crypt.Encrypt(bytes.Join([][]byte{{byte(len(b))}, b, recv[:i]}, nil)), route.send_to)
 
 			}
 
@@ -176,6 +171,5 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 			}
 		}
 	}
-
 
 }
