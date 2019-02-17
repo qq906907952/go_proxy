@@ -7,25 +7,29 @@
     "Local_addr": "0.0.0.0",
     "Local_port": 3939,
     "Server_addr": "0.0.0.0",
-    "Server_port": 443,
-    "Enc_method": "aes-256-cfb",
+    "Server_port": 9999,
+    "Enc_method": "chacha20",
     "Password": " miku chann wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
-    "Dns_req_proto": "udp",
+    "Dns_req_proto": "tcp",
     "Domain_cache_time":3600,
     "Tls":{
       "Turn":true,
-      "Tcp_encrypt":false,
-      "Root_cert_path":"test/cert/serv/root.crt",
+      "Tcp_encrypt":true,
+      "Root_cert_path":"cert_remote/cert/serv/root.crt",
       "Client_cert":[
         {
-          "Cert":"test/cert/client/client_2.crt",
-          "Private_key":"test/cert/client/client_2.key"
+          "Cert":"cert_remote/cert/client/client_2.crt",
+          "Private_key":"cert_remote/cert/client/client_2.key"
         },
         {
-          "Cert":"test/cert/client/client_1.crt",
-          "Private_key":"test/cert/client/client_1.key"
+          "Cert":"cert_remote/cert/client/client_3.crt",
+          "Private_key":"cert_remote/cert/client/client_3.key"
+        },
+        {
+          "Cert":"cert_remote/cert/client/client_1.crt",
+          "Private_key":"cert_remote/cert/client/client_1.key"
         }
 
       ]

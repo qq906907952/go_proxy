@@ -180,7 +180,7 @@ func init() {
 	}
 
 	if ( Config.Client.Turn || Config.Client.Local_proxy) {
-
+		server_name:=Config.Client.Server_addr
 		Config.Client.Server_addr = strings.Trim(Config.Client.Server_addr, "")
 		if net.ParseIP(Config.Client.Server_addr) == nil {
 			domain := Config.Client.Server_addr
@@ -207,7 +207,7 @@ func init() {
 			cert_pool.AppendCertsFromPEM(root_cert)
 			client_tls_conf = &tls.Config{
 				RootCAs:    cert_pool,
-				ServerName: Config.Client.Server_addr,
+				ServerName: server_name,
 			}
 
 			for _, v := range Config.Client.Tls.Client_cert {

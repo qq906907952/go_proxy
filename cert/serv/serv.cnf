@@ -10,12 +10,13 @@ ST = HK
 L = HK
 O = miku_fan
 OU = miku_fan
-#CN = <MASTER_IP>
+
 
 [ req_ext ]
 subjectAltName = @alt_names
 
 [ alt_names ]
+#DNS.1 = *.a.com
 IP.1 = 192.168.199.67
 
 [ v3_ext ]

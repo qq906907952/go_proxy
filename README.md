@@ -274,7 +274,7 @@ udp中继：
 
 cert目录下包含生成证书的脚本。
 
-切到cert/serv目录下修改cert/serv/serv.cnf 中 alt_names.IP.1 改为服务器ip 或者dn.CN改为服务器域名，
+切到cert/serv目录下修改cert/serv/serv.cnf 中 alt_names.IP.1 改为服务器ip 或者 alt_names.NDS.1改为服务器域名，
 这里的值要与Client.Server_addr一致
 
 执行 bash create_serv_crt.sh 生成证书与私钥，其中root.crt是根证书，server.crt 和 server.key 是服务器证书与私钥
