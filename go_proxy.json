@@ -1,34 +1,58 @@
 {
-  "Client":{
-    "Ipv6":false,
-    "Local_proxy":true,
-    "Local_addr":"0.0.0.0",
+  "Client": {
+    "Local_proxy": true,
+    "Ipv6": false,
+    "Local_addr": "0.0.0.0",
     "Local_port": 3939,
     "Server_addr": "0.0.0.0",
-    "Server_port": 3939,
-    "Enc_method": "chacha20",
-    "Password": " miku chang wa yichibann kawaii ",
+    "Server_port": 9393,
+    "Enc_method": "aes-256-cfb",
+    "Password": " miku chann wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
-    "Dns_req_proto": "tcp"
+    "Dns_req_proto": "udp",
+    "Domain_cache_time":3600,
+    "Tls":{
+      "Turn":true,
+      "Tcp_encrypt":true,
+      "Root_cert_path":"test/cert/serv/root.crt",
+      "Client_cert":[
+        {
+          "Cert":"test/cert/client/client_2.crt",
+          "Private_key":"test/cert/client/client_2.key"
+        },
+        {
+          "Cert":"test/cert/client/client_1.crt",
+          "Private_key":"test/cert/client/client_1.key"
+        }
+
+      ]
+    }
   },
 
   "Server": {
     "Turn": false,
 
-    "Port":[
+    "Port": [
       {
-        "Listen_port":9393,
-        "Enc_method": "chacha20",
-        "Password": " miku chang wa yichibann kawaii "
+        "Tls": {
+          "Turn":true,
+          "Tcp_encrypt":false,
+          "Server_cert_path":"cert/serv/server.crt",
+          "Server_private_key_path":"cert/serv/server.key",
+          "Client_cert_paths":[
+            "cert/client/client.crt"
+          ]
+        },
+        "Listen_port": 443,
+        "Enc_method": "aes-256-cfb",
+        "Password": " miku chann wa yichibann kawaii "
       }
     ]
-
   },
 
-  "Ulimit":1024000,
-  "Connection_log":true,
-  "Udp_timeout":30
+  "Ulimit": 1024000,
+  "Connection_log": false,
+  "Udp_timeout": 30
 
 }
-

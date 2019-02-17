@@ -1,0 +1,23 @@
+[ req ]
+default_bits = 2048
+prompt = no
+req_extensions = req_ext
+distinguished_name = dn
+
+[ dn ]
+C = HK
+ST = HK
+L = HK
+O = miku_fan
+OU = miku_fan
+#CN = <MASTER_IP>
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+IP.1 = 192.168.199.67
+
+[ v3_ext ]
+extendedKeyUsage=serverAuth
+subjectAltName=@alt_names

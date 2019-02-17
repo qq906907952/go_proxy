@@ -33,7 +33,7 @@ func Handle_HTTP(local *net.TCPConn, host string, dest_port int, data []byte) {
 
 		} else {
 
-			dest_ip, err := util.Parse_not_cn_domain(url, crypt)
+			dest_ip, err := util.Parse_not_cn_domain(url, tcp_crypt,udp_crypt)
 
 
 			if err != nil {
@@ -113,7 +113,7 @@ func Handle_HTTPS(local *net.TCPConn, host string) {
 
 		} else {
 
-			dest_ip, err := util.Parse_not_cn_domain(url, crypt, )
+			dest_ip, err := util.Parse_not_cn_domain(url,tcp_crypt,udp_crypt)
 
 			if err != nil {
 				util.Print_log("can not reslove domain:" + url + " " + err.Error())

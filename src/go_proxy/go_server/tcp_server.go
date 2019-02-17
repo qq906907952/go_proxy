@@ -9,9 +9,10 @@ import (
 	"encoding/binary"
 	"time"
 	"errors"
+	"crypto/tls"
 )
 
-func Start_TCPserver(port int, crypt util.Crypt_interface) {
+func Start_TCPserver(port int, crypt util.Crypt_interface, tls_conf *tls.Config) {
 	defer util.Group.Done()
 	listen, err := net.ListenTCP("tcp", &net.TCPAddr{
 		IP:   nil,
@@ -22,9 +23,9 @@ func Start_TCPserver(port int, crypt util.Crypt_interface) {
 		log.Fatal(err)
 
 	}
-
-	util.Print_log("TCP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
-	fmt.Println("TCP server listen on " + "0.0.0.0" + ":" + strconv.Itoa(port))
+	_l:=fmt.Sprintf("TCP server listen on %s:%d crypt method:%s" , "0.0.0.0" , port,crypt.String())
+	util.Print_log(_l)
+	fmt.Println(_l)
 
 	for {
 		tcp_con, err := listen.AcceptTCP()
@@ -33,17 +34,28 @@ func Start_TCPserver(port int, crypt util.Crypt_interface) {
 			continue
 		}
 
-		go handle_con(tcp_con, crypt)
+		go handle_con(tcp_con, crypt,tls_conf)
 
 	}
+
+
 }
 
-func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
+func handle_con(_con *net.TCPConn, crypt util.Crypt_interface,tls_conf *tls.Config) {
 	var err error
 	defer util.Handle_panic()
-	defer con.Close()
-	con.SetKeepAlive(true)
-	con.SetKeepAlivePeriod(10*time.Second)
+
+	defer util.Close_tcp(_con)
+	_con.SetKeepAlive(true)
+	_con.SetKeepAlivePeriod(10*time.Second)
+
+	var con net.Conn
+	if tls_conf!=nil{
+		con=tls.Server(_con,tls_conf)
+	}else{
+		con=_con
+	}
+
 
 	dest, request_type, err := handshake(con, crypt)
 
@@ -67,7 +79,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 		go func() {
 			defer ns.Close()
-			defer con.Close()
+			defer util.Close_tcp(_con)
 			answer := make([]byte, util.Udp_recv_buff)
 			for {
 				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
@@ -96,12 +108,12 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 				return
 			}
 			if dest.Port==53 && util.Config.Connection_log {
-				go func(){
+				go func(dec_data []byte){
 					domain:=util.Get_domain_name_from_request(dec_data)
-					if domain!=""{
+					if domain!="" && util.Config.Connection_log{
 						util.Print_log("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
 					}
-				}()
+				}(dec_data)
 			}
 
 			if _, err := ns.Write(dec_data); err != nil {
@@ -117,7 +129,7 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 			util.Print_log("tcp can not connect from " + con.RemoteAddr().String() + " to " + dest.IP.String() + ":" + strconv.Itoa(dest.Port) + " " + err.Error())
 			return
 		}
-		defer target.Close()
+		defer util.Close_tcp(target)
 		target.SetKeepAlive(true)
 		target.SetKeepAlivePeriod(10*time.Second)
 		util.Connection_loop(target, con, crypt)
@@ -128,11 +140,13 @@ func handle_con(con *net.TCPConn, crypt util.Crypt_interface) {
 
 }
 
-func handshake(con *net.TCPConn, crypt util.Crypt_interface) (*net.TCPAddr, int, error) {
+func handshake(con net.Conn, crypt util.Crypt_interface) (*net.TCPAddr, int, error) {
 	data, err := crypt.Read(con)
+	if err!=nil{
+		return nil,0,err
+	}
 	if len(data) < 15 || (data[8] != 1 && data[8] != 0 ) || int(data[9]) > len(data[10:]) {
-		util.Print_log("len error:data len illegal ")
-		return nil, 0, errors.New("len error")
+		return nil, 0, errors.New("len error,maybe enc method not correspond")
 	}
 	timestamp := binary.BigEndian.Uint64(data[:8])
 	if err != nil || time.Now().Unix()-int64(timestamp) > 60 {

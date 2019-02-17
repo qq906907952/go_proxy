@@ -102,7 +102,7 @@ func handle_domain(local *net.TCPConn) {
 			handle_connection(local, ip, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn_domain)
 		} else {
 
-			dest_ip, err := util.Parse_not_cn_domain(string(domain), crypt)
+			dest_ip, err := util.Parse_not_cn_domain(string(domain), tcp_crypt,udp_crypt)
 
 			if err != nil {
 				util.Print_log("can not reslove domain:" + dest_domain + " " + err.Error())

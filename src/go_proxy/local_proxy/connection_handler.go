@@ -6,10 +6,11 @@ import (
 	"io"
 	"fmt"
 	"time"
+
 )
 
 func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix_data []byte, ack_data []byte, is_cn bool) {
-	var remote *net.TCPConn
+	var remote net.Conn
 	var err error
 
 	if is_cn {
@@ -24,21 +25,21 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 			util.Print_log(fmt.Sprintf("can not connect to %s:%s",ip.String(),err.Error()))
 			return
 		}
-		remote.SetKeepAlive(true)
-		remote.SetKeepAlivePeriod(10*time.Second)
-
+		remote.(*net.TCPConn).SetKeepAlive(true)
+		remote.(*net.TCPConn).SetKeepAlivePeriod(10*time.Second)
+		defer util.Close_tcp(remote.(*net.TCPConn))
 	} else {
-
-		remote, err = util.Connect_to_server(crypt, util.Tcp_conn,dest_port, ip.IP)
+		var raw_socket *net.TCPConn
+		remote,raw_socket, err = util.Connect_to_server(tcp_crypt, util.Tcp_conn,dest_port, ip.IP)
 
 		if err != nil {
 			util.Print_log("can not connect to server : " + err.Error())
 			return
 		}
-
+		defer util.Close_tcp(raw_socket)
 	}
 
-	defer remote.Close()
+
 
 	if prefix_data != nil {
 		if is_cn {
@@ -47,7 +48,7 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 			}
 		} else {
 
-			err := crypt.Write(remote, prefix_data)
+			err := tcp_crypt.Write(remote, prefix_data)
 			if err != nil {
 				return
 			}
@@ -64,8 +65,8 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 	if is_cn {
 
 		go func() {
-			defer local.Close()
-			defer remote.Close()
+			defer util.Close_tcp(local)
+			defer util.Close_tcp(remote.(*net.TCPConn))
 			io.Copy(local, remote)
 		}()
 
@@ -73,7 +74,8 @@ func handle_connection(local *net.TCPConn, ip *net.IPAddr, dest_port int, prefix
 
 
 	} else {
-		util.Connection_loop(local, remote, crypt)
+
+		util.Connection_loop(local, remote, tcp_crypt)
 	}
 
 }
