@@ -25,7 +25,6 @@ type config struct {
 	Connection_log bool
 	Udp_timeout    int64
 	Client struct {
-		Turn bool
 		Tls struct {
 			Turn           bool
 			Tcp_encrypt    bool
@@ -88,9 +87,6 @@ func init() {
 		log.Fatal(jerr)
 	}
 
-	if Config.Client.Turn && Config.Client.Local_proxy {
-		log.Fatal("client and http_proxy can not be turn on in the same machine")
-	}
 
 	if Config.Client.Dns_req_proto != "tcp" && Config.Client.Dns_req_proto != "udp" {
 		log.Fatal("dns request protocol is not support")
@@ -179,9 +175,9 @@ func init() {
 		Config.Udp_timeout = 30
 	}
 
-	if ( Config.Client.Turn || Config.Client.Local_proxy) {
-
+	if Config.Client.Local_proxy {
 		Config.Client.Server_addr = strings.Trim(Config.Client.Server_addr, "")
+		server_name:=Config.Client.Server_addr
 		if net.ParseIP(Config.Client.Server_addr) == nil {
 			domain := Config.Client.Server_addr
 			ns, err := net.LookupIP(domain)
@@ -207,7 +203,7 @@ func init() {
 			cert_pool.AppendCertsFromPEM(root_cert)
 			client_tls_conf = &tls.Config{
 				RootCAs:    cert_pool,
-				ServerName: Config.Client.Server_addr,
+				ServerName: server_name,
 			}
 
 			for _, v := range Config.Client.Tls.Client_cert {

@@ -34,7 +34,7 @@ func Start_local_proxy_client() {
 		log.Fatal("enc method must not none when tls disable")
 	}
 
-	lcoal_listen, err := net.ListenTCP("tcp", &net.TCPAddr{
+	local_listen, err := net.ListenTCP("tcp", &net.TCPAddr{
 		IP:   net.ParseIP(util.Config.Client.Local_addr),
 		Port: util.Config.Client.Local_port,
 		Zone: "",
@@ -55,7 +55,7 @@ func Start_local_proxy_client() {
 	util.Print_log(_l)
 
 	for {
-		local, err := lcoal_listen.AcceptTCP()
+		local, err := local_listen.AcceptTCP()
 		if err != nil {
 			util.Print_log("tcp accept error " + err.Error())
 			continue

@@ -4,26 +4,30 @@
     "Ipv6": false,
     "Local_addr": "0.0.0.0",
     "Local_port": 3939,
-    "Server_addr": "0.0.0.0",
-    "Server_port": 9393,
-    "Enc_method": "aes-256-cfb",
+    "Server_addr": "ydx.com",
+    "Server_port": 33999,
+    "Enc_method": "chacha20",
     "Password": " miku chann wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
-    "Dns_req_proto": "udp",
+    "Dns_req_proto": "tcp",
     "Domain_cache_time":3600,
     "Tls":{
       "Turn":true,
       "Tcp_encrypt":true,
-      "Root_cert_path":"test/cert/serv/root.crt",
+      "Root_cert_path":"tmp/cert/serv/root.crt",
       "Client_cert":[
         {
-          "Cert":"test/cert/client/client_2.crt",
-          "Private_key":"test/cert/client/client_2.key"
+          "Cert":"tmp/cert/client/client_2.crt",
+          "Private_key":"tmp/cert/client/client_2.key"
         },
         {
-          "Cert":"test/cert/client/client_1.crt",
-          "Private_key":"test/cert/client/client_1.key"
+          "Cert":"tmp/cert/client/client_3.crt",
+          "Private_key":"tmp/cert/client/client_3.key"
+        },
+        {
+          "Cert":"tmp/cert/client/client_1.crt",
+          "Private_key":"tmp/cert/client/client_1.key"
         }
 
       ]

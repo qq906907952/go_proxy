@@ -54,9 +54,9 @@ func handle_socks5_tcp(local *net.TCPConn, request []byte) {
 
 func construct_sock5_reply() []byte {
 	var atype byte
-	atype=1
+	atype = 1
 
-	return bytes.Join([][]byte{[]byte{5, 0, 0, atype}, []byte{0,0,0,0}, []byte{0,0}}, nil)
+	return bytes.Join([][]byte{[]byte{5, 0, 0, atype}, []byte{0, 0, 0, 0}, []byte{0, 0}}, nil)
 }
 
 func handle_domain(local *net.TCPConn) {
@@ -70,20 +70,19 @@ func handle_domain(local *net.TCPConn) {
 
 	domain, err := util.Read_tcp_data(local, int(domain_len[0]))
 	if err != nil {
-		util.Print_log("read socks5 domain error:"+err.Error())
+		util.Print_log("read socks5 domain error:" + err.Error())
 		return
 	}
 
 	port, err := util.Read_tcp_data(local, 2)
 	if err != nil {
-		util.Print_log("read socks5 port error:"+err.Error())
+		util.Print_log("read socks5 port error:" + err.Error())
 		return
 	}
 	dest_domain := string(domain)
-
 	if util.Is_domain(dest_domain) {
-		if util.Config.Connection_log{
-			util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_domain+":"+strconv.Itoa(int(binary.BigEndian.Uint16(port))))
+		if util.Config.Connection_log {
+			util.Print_log("connection log:%s connect to %s", local.RemoteAddr().String(), dest_domain+":"+strconv.Itoa(int(binary.BigEndian.Uint16(port))))
 		}
 		is_cn_domain, err := util.Is_china_domain(dest_domain)
 		if err != nil {
@@ -98,17 +97,15 @@ func handle_domain(local *net.TCPConn) {
 				return
 			}
 
-
 			handle_connection(local, ip, int(binary.BigEndian.Uint16(port)), nil, construct_sock5_reply(), is_cn_domain)
 		} else {
 
-			dest_ip, err := util.Parse_not_cn_domain(string(domain), tcp_crypt,udp_crypt)
+			dest_ip, err := util.Parse_not_cn_domain(string(domain), tcp_crypt, udp_crypt)
 
 			if err != nil {
 				util.Print_log("can not reslove domain:" + dest_domain + " " + err.Error())
 				return
 			}
-
 
 			handle_connection(local, &net.IPAddr{
 				IP:   dest_ip,
@@ -117,32 +114,38 @@ func handle_domain(local *net.TCPConn) {
 
 		}
 	} else {
-		ip := net.ParseIP(dest_domain)
-		if ip!=nil{
-			handle_ip(local, ip.To16(), port)
-		}else{
-			util.Print_log("socks5 recv a unknow addr:"+dest_domain)
-		}
 
+		ip := net.ParseIP(dest_domain)
+
+		if ip != nil {
+			if ip.To4() != nil {
+				handle_ip(local, ip.To4(), port)
+			} else {
+				handle_ip(local, ip.To16(), port)
+			}
+
+		} else {
+			util.Print_log("socks5 recv a unknow addr:" + dest_domain)
+		}
 
 	}
 }
 
 func handle_ip(local *net.TCPConn, ip, port []byte) {
-	dest_ip:=&net.IPAddr{
+	dest_ip := &net.IPAddr{
 		IP:   ip,
 		Zone: "",
 	}
-	dest_port:=int(binary.BigEndian.Uint16(port))
-	if util.Config.Connection_log{
-		util.Print_log("connection log:%s connect to %s" ,local.RemoteAddr().String(),dest_ip.String()+":"+strconv.Itoa(dest_port))
+	dest_port := int(binary.BigEndian.Uint16(port))
+	if util.Config.Connection_log {
+		util.Print_log("connection log:%s connect to %s", local.RemoteAddr().String(), dest_ip.String()+":"+strconv.Itoa(dest_port))
 	}
 	is_cn := false
 	var err error
 	if len(ip) == 4 {
 		is_cn, err = util.Is_china_ipv4_addr(dest_ip.String())
-		if err != nil {
 
+		if err != nil {
 			return
 		}
 
