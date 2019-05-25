@@ -168,6 +168,29 @@ func Close_tcp(conn *net.TCPConn) {
 	conn.Close()
 }
 
+func Parse_udp_recv(dec_data []byte) (dest_ip, source_ip [4]byte, dest_port, source_port int, real_data []byte, err error) {
+	dest_len := dec_data[0]
+
+	if dest_len <6  || dest_len>18 || len(dec_data) < int(dest_len)+1 {
+		err = errors.New("recv udp len error")
+		return
+	}
+
+	origin_len := dec_data[int(dest_len)+1]
+
+	if origin_len <6 || origin_len>18 || len(dec_data) < int(origin_len)+int(dest_len)+2 {
+		err = errors.New("recv udp len error")
+		return
+	}
+	dest_ip = [4]byte{dec_data[3], dec_data[4], dec_data[5], dec_data[6]} // origin dest ip
+	dest_port = int(binary.BigEndian.Uint16(dec_data[1:3]))
+	source_ip = [4]byte{dec_data[10], dec_data[11], dec_data[12], dec_data[13]}
+	source_port = int(binary.BigEndian.Uint16(dec_data[8:10]))
+	real_data = dec_data[dest_len+origin_len+2:]
+
+	return
+}
+
 func Connection_loop(con1 *net.TCPConn, con2 net.Conn, crypt Crypt_interface) {
 	//con1 read raw ,enc and write to con2
 	//con2 read enc data ,dec and write to con1

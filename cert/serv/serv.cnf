@@ -16,8 +16,10 @@ OU = miku_fan
 subjectAltName = @alt_names
 
 [ alt_names ]
-#DNS.1 = *.a.com
-IP.1 = 192.168.199.67
+DNS.1 = ydx.com
+DNS.2=  cn1.vxtrans.link
+DNS.3=  cn2.vxtrans.link
+IP.1 = 47.244.137.231
 
 [ v3_ext ]
 extendedKeyUsage=serverAuth

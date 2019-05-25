@@ -66,6 +66,20 @@ func handle_con(_con *net.TCPConn, crypt util.Crypt_interface,tls_conf *tls.Conf
 
 
 	if request_type == util.Udp_conn {
+
+		dec_data, err := crypt.Read(con)
+		if err != nil {
+			return
+		}
+		if dest.Port==53 && util.Config.Connection_log {
+			go func(dec_data []byte){
+				domain:=util.Get_domain_name_from_request(dec_data)
+				if domain!="" && util.Config.Connection_log{
+					util.Print_log("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
+				}
+			}(dec_data)
+		}
+
 		ns, err := net.DialUDP("udp", nil, &net.UDPAddr{
 			IP:   dest.IP,
 			Port: dest.Port,
@@ -77,49 +91,24 @@ func handle_con(_con *net.TCPConn, crypt util.Crypt_interface,tls_conf *tls.Conf
 		}
 		defer ns.Close()
 
-		go func() {
-			defer ns.Close()
-			defer util.Close_tcp(_con)
-			answer := make([]byte, util.Udp_recv_buff)
-			for {
-				if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
-					util.Print_log("set udp read deadline error" + err.Error())
-					return
-				}
-				i, err := ns.Read(answer)
-				if i > 0 {
-					if err := crypt.Write(con, answer[:i]); err != nil {
-						return
-					}
-				}
-				if err != nil {
-					return
-				}
-			}
-		}()
+		if _, err := ns.Write(dec_data); err != nil {
+			return
+		}
 
-		for {
-			if err:=con.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
-				util.Print_log("set udp read deadline error" + err.Error())
+		if err:=ns.SetReadDeadline(time.Now().Add(time.Duration(util.Config.Udp_timeout)*time.Second));err!=nil{
+			util.Print_log("set udp read deadline error" + err.Error())
+			return
+		}
+		answer := make([]byte, util.Udp_recv_buff)
+		i, err := ns.Read(answer)
+		if i > 0 {
+			if err := crypt.Write(con, answer[:i]); err != nil {
+				util.Print_log("write to remote fail:" + err.Error())
 				return
 			}
-			dec_data, err := crypt.Read(con)
-			if err != nil {
-				return
-			}
-			if dest.Port==53 && util.Config.Connection_log {
-				go func(dec_data []byte){
-					domain:=util.Get_domain_name_from_request(dec_data)
-					if domain!="" && util.Config.Connection_log{
-						util.Print_log("connection log:%s query domain name %s" ,con.RemoteAddr().String(), domain)
-					}
-				}(dec_data)
-			}
-
-			if _, err := ns.Write(dec_data); err != nil {
-				return
-			}
-
+		}
+		if err != nil {
+			return
 		}
 
 	} else if request_type == util.Tcp_conn {
@@ -145,6 +134,7 @@ func handshake(con net.Conn, crypt util.Crypt_interface) (*net.TCPAddr, int, err
 	if err!=nil{
 		return nil,0,err
 	}
+	// timestamp(8 bytes) + type(udp or tcp) + dest addr len(1 byte) + dest port(2 bytes) + dest ip(4 or 16) + data
 	if len(data) < 15 || (data[8] != 1 && data[8] != 0 ) || int(data[9]) > len(data[10:]) {
 		return nil, 0, errors.New("len error,maybe enc method not correspond")
 	}

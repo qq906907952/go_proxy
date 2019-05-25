@@ -1,14 +1,14 @@
 {
 
   "Client": {
-    "Turn":false,
-    "Local_proxy": true,
+    "Turn":true,
+    "Local_proxy": false,
     "Ipv6": false,
     "Local_addr": "0.0.0.0",
     "Local_port": 3939,
-    "Server_addr": "0.0.0.0",
-    "Server_port": 9999,
-    "Enc_method": "chacha20",
+    "Server_addr": "ydx.com",
+	"Server_port":44444,
+    "Enc_method": "aes-256-cfb",
     "Password": " miku chann wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
@@ -17,19 +17,19 @@
     "Tls":{
       "Turn":true,
       "Tcp_encrypt":true,
-      "Root_cert_path":"cert_remote/cert/serv/root.crt",
+      "Root_cert_path":"cert/serv/root.crt",
       "Client_cert":[
         {
-          "Cert":"cert_remote/cert/client/client_2.crt",
-          "Private_key":"cert_remote/cert/client/client_2.key"
+          "Cert":"cert/client/client_2.crt",
+          "Private_key":"cert/client/client_2.key"
         },
         {
-          "Cert":"cert_remote/cert/client/client_3.crt",
-          "Private_key":"cert_remote/cert/client/client_3.key"
+          "Cert":"cert/client/client_3.crt",
+          "Private_key":"cert/client/client_3.key"
         },
         {
-          "Cert":"cert_remote/cert/client/client_1.crt",
-          "Private_key":"cert_remote/cert/client/client_1.key"
+          "Cert":"cert/client/client_1.crt",
+          "Private_key":"cert/client/client_1.key"
         }
 
       ]
@@ -42,7 +42,7 @@
     "Port": [
       {
         "Tls": {
-          "Turn":true,
+          "Turn":false,
           "Tcp_encrypt":false,
           "Server_cert_path":"cert/serv/server.crt",
           "Server_private_key_path":"cert/serv/server.key",
