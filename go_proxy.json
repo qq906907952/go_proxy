@@ -1,14 +1,14 @@
 {
 
   "Client": {
-    "Turn":true,
-    "Local_proxy": false,
+    "Turn":false,
+    "Local_proxy": true,
     "Ipv6": false,
     "Local_addr": "0.0.0.0",
     "Local_port": 3939,
     "Server_addr": "ydx.com",
 	"Server_port":44444,
-    "Enc_method": "aes-256-cfb",
+    "Enc_method": "chacha20",
     "Password": " miku chann wa yichibann kawaii ",
     "Dns_addr": "8.8.8.8",
     "Dns_port": 53,
