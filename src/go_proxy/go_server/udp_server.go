@@ -65,22 +65,24 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 		return
 	}
 	dest_addr_len := dec_data[0]
-
-	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+15 {
+	// dest addr len + dest port(2 bytes) + dest ip + lan addr len + lan port (2) + lan ip + data
+	if dest_addr_len < 6 || len(dec_data) < int(dest_addr_len)+2 {
 		util.Print_log("udp:recv data len error from " + udp_addr.String())
 		return
 	}
 	origin_addr_len := dec_data[int(dest_addr_len)+1]
 	if origin_addr_len < 6 || len(dec_data) < int(origin_addr_len)+int(dest_addr_len)+2 {
-		util.Print_log("udp:recv data len error from " + udp_addr.String() )
+		util.Print_log("udp:recv data len error from " + udp_addr.String())
 		return
 	}
 
 	dest_port := binary.BigEndian.Uint16(dec_data[1:3])
 	dest_ip := dec_data[3: dest_addr_len+1]
-	origin_port := binary.BigEndian.Uint16(dec_data[dest_addr_len+2: dest_addr_len+4])
-	origin_ip := dec_data[dest_addr_len+4: dest_addr_len+4+origin_addr_len-2]
 
+	//lan ip and port
+	origin_port_byte := dec_data[dest_addr_len+2: dest_addr_len+4]
+	origin_port := binary.BigEndian.Uint16(origin_port_byte)
+	origin_ip := dec_data[dest_addr_len+4: dest_addr_len+4+origin_addr_len-2]
 	real_data := dec_data[dest_addr_len+origin_addr_len+2:]
 
 	if dest_port == 53 && util.Config.Connection_log {
@@ -154,15 +156,22 @@ func handle_udp_data(udp_addr *net.UDPAddr, data []byte, server *net.UDPConn, cr
 
 				from_port := make([]byte, 2)
 				binary.BigEndian.PutUint16(from_port, uint16(from_addr.Port))
-				b := []byte{}
+				dest_b := []byte{}
 				if from_addr.IP.To4() != nil {
-					b = bytes.Join([][]byte{from_port, from_addr.IP.To4()}, nil)
+					dest_b = bytes.Join([][]byte{from_port, from_addr.IP.To4()}, nil)
 
 				} else {
-					b = bytes.Join([][]byte{from_port, from_addr.IP.To16()}, nil)
+					dest_b = bytes.Join([][]byte{from_port, from_addr.IP.To16()}, nil)
 				}
 
-				server.WriteToUDP(crypt.Encrypt(bytes.Join([][]byte{{byte(len(b))}, b, recv[:i]}, nil)), route.send_to)
+				origin_b := bytes.Join([][]byte{origin_port_byte, origin_ip}, nil)
+				//dest addr len + dest port (2) + dest ip(4 or 16) +
+				//lan addr len + lan port(2 bytes) + lan ip(4 or 16 bytes) +
+				//data
+				server.WriteToUDP(crypt.Encrypt(bytes.Join([][]byte{
+					{byte(len(dest_b))}, dest_b,
+					{byte(len(origin_b))}, origin_b,
+					recv[:i]}, nil)), route.send_to)
 
 			}
 
