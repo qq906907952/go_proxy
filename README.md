@@ -1,3 +1,6 @@
+======
+此项目不再更新，请移步至 https://github.com/qq906907952/go_proxy2
+
 轻量级代理
 ======
 纯go实现的基于http，socks5代理和基于iptables搭建全局智能翻墙环境
